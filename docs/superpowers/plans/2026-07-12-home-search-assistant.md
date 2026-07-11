@@ -1034,14 +1034,22 @@ ${feedbackLines || "none yet"}
 
 Rewrite the learned summary in 2-4 sentences, incorporating what the feedback reveals about their real preferences (e.g. patterns in what they liked or disliked). Respond with ONLY the summary text, no preamble.`;
 
-  return askClaude(prompt);
+  const summary = await askClaude(prompt);
+
+  if (!summary.trim()) {
+    throw new Error("updateLearnedSummary: Claude returned an empty summary");
+  }
+
+  return summary;
 }
 ```
+
+(Note: the empty-summary guard was added after Task 10's code review — without it, an empty Claude response silently overwrites `learnedSummary` and degrades every future prompt with no error surfaced.)
 
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `npm test -- tests/unit/preference-profile.test.ts`
-Expected: PASS (1 test).
+Expected: PASS (5 tests — the original test plus 4 added during review: empty feedback → "none yet", null learnedSummary → "none yet", empty mustHaveExtras → "none", and empty Claude response → rejects).
 
 - [ ] **Step 5: Commit**
 
@@ -1053,6 +1061,8 @@ git commit -m "feat: add preference profile learning from feedback"
 ---
 
 ## Task 11: Feedback API Route
+
+**Note (added after Task 10's review):** `updateLearnedSummary` now throws on an empty Claude response, and any Claude API error also propagates as a throw. The route below calls it *after* `db.feedback.create` has already succeeded — without a try/catch around the refresh block, a Claude hiccup would turn an otherwise-successful feedback submission into a 500 for the user, even though their like/dislike was already saved. Step 3's implementation wraps the refresh call accordingly; don't remove that try/catch when implementing.
 
 **Files:**
 - Create: `src/app/api/feedback/route.ts`
@@ -1169,19 +1179,25 @@ export async function POST(req: Request) {
   if (totalFeedback % REFRESH_EVERY_N_FEEDBACK === 0) {
     const profile = await db.preferenceProfile.findFirst({ orderBy: { createdAt: "desc" } });
     if (profile) {
-      const recent = await db.feedback.findMany({
-        orderBy: { createdAt: "desc" },
-        take: REFRESH_EVERY_N_FEEDBACK,
-        include: { listing: { select: { address: true, floor: true } } },
-      });
-      const learnedSummary = await updateLearnedSummary(profile, recent as any);
-      await db.preferenceProfile.update({ where: { id: profile.id }, data: { learnedSummary } });
+      try {
+        const recent = await db.feedback.findMany({
+          orderBy: { createdAt: "desc" },
+          take: REFRESH_EVERY_N_FEEDBACK,
+          include: { listing: { select: { address: true, floor: true } } },
+        });
+        const learnedSummary = await updateLearnedSummary(profile, recent as any);
+        await db.preferenceProfile.update({ where: { id: profile.id }, data: { learnedSummary } });
+      } catch (err) {
+        console.error("Failed to refresh learned summary:", err);
+      }
     }
   }
 
   return NextResponse.json({ feedback });
 }
 ```
+
+(The try/catch means a Claude failure during the learning-refresh doesn't fail the feedback submission itself — the user's like/dislike is already saved by this point; the summary just doesn't get refreshed this time and will retry on the next 3rd event.)
 
 - [ ] **Step 4: Run the test to verify it passes**
 
