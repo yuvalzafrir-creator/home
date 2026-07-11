@@ -43,4 +43,31 @@ describe("POST /api/onboarding", () => {
     const res = await POST(req as any);
     expect(res.status).toBe(400);
   });
+
+  it("rejects a non-integer budgetMax", async () => {
+    const req = new Request("http://localhost/api/onboarding", {
+      method: "POST",
+      body: JSON.stringify({
+        locations: ["Tel Aviv"],
+        budgetMax: 3000000.5,
+        goal: "primary",
+      }),
+    });
+
+    const res = await POST(req as any);
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 with a clean error on malformed JSON body", async () => {
+    const req = new Request("http://localhost/api/onboarding", {
+      method: "POST",
+      body: "not valid json",
+    });
+
+    const res = await POST(req as any);
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body).toEqual({ error: "Invalid JSON body" });
+  });
 });
