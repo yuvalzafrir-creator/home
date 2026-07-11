@@ -1482,6 +1482,7 @@ export default function FeedPage() {
   async function handleFeedback(listingId: string, reaction: "like" | "dislike") {
     await fetch("/api/feedback", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ listingId, reaction }),
     });
     setListings((prev) => prev.filter((l) => l.id !== listingId));
@@ -1553,6 +1554,7 @@ export default function ListingsHistoryPage() {
   async function handleFeedback(listingId: string, reaction: "like" | "dislike") {
     await fetch("/api/feedback", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ listingId, reaction }),
     });
   }
