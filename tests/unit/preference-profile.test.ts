@@ -25,4 +25,76 @@ describe("updateLearnedSummary", () => {
     expect(summary).toContain("mamad");
     expect(claude.askClaude).toHaveBeenCalledWith(expect.stringContaining("ground floor"));
   });
+
+  it("falls back to 'none yet' in the prompt when there is no recent feedback", async () => {
+    vi.spyOn(claude, "askClaude").mockResolvedValue("Some summary.");
+
+    await updateLearnedSummary(
+      {
+        locations: JSON.stringify(["Tel Aviv"]),
+        budgetMax: 3000000,
+        mustHaveExtras: JSON.stringify(["mamad"]),
+        freeText: null,
+        learnedSummary: "Existing summary.",
+      } as any,
+      []
+    );
+
+    expect(claude.askClaude).toHaveBeenCalledWith(expect.stringContaining("none yet"));
+  });
+
+  it("labels a null learnedSummary as 'none yet' in the prompt", async () => {
+    vi.spyOn(claude, "askClaude").mockResolvedValue("Some summary.");
+
+    await updateLearnedSummary(
+      {
+        locations: JSON.stringify(["Tel Aviv"]),
+        budgetMax: 3000000,
+        mustHaveExtras: JSON.stringify(["mamad"]),
+        freeText: null,
+        learnedSummary: null,
+      } as any,
+      []
+    );
+
+    expect(claude.askClaude).toHaveBeenCalledWith(
+      expect.stringContaining("Previous learned summary: none yet")
+    );
+  });
+
+  it("labels empty mustHaveExtras as 'none' in the prompt", async () => {
+    vi.spyOn(claude, "askClaude").mockResolvedValue("Some summary.");
+
+    await updateLearnedSummary(
+      {
+        locations: JSON.stringify(["Tel Aviv"]),
+        budgetMax: 3000000,
+        mustHaveExtras: JSON.stringify([]),
+        freeText: null,
+        learnedSummary: null,
+      } as any,
+      []
+    );
+
+    expect(claude.askClaude).toHaveBeenCalledWith(
+      expect.stringContaining("Must-have extras: none")
+    );
+  });
+
+  it("throws if Claude returns an empty summary", async () => {
+    vi.spyOn(claude, "askClaude").mockResolvedValue("");
+
+    await expect(
+      updateLearnedSummary(
+        {
+          locations: JSON.stringify(["Tel Aviv"]),
+          budgetMax: 3000000,
+          mustHaveExtras: JSON.stringify(["mamad"]),
+          freeText: null,
+          learnedSummary: null,
+        } as any,
+        []
+      )
+    ).rejects.toThrow();
+  });
 });

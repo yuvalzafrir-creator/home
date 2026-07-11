@@ -29,5 +29,11 @@ ${feedbackLines || "none yet"}
 
 Rewrite the learned summary in 2-4 sentences, incorporating what the feedback reveals about their real preferences (e.g. patterns in what they liked or disliked). Respond with ONLY the summary text, no preamble.`;
 
-  return askClaude(prompt);
+  const summary = await askClaude(prompt);
+
+  if (!summary.trim()) {
+    throw new Error("updateLearnedSummary: Claude returned an empty summary");
+  }
+
+  return summary;
 }
