@@ -921,15 +921,24 @@ ${JSON.stringify(listing, null, 2)}
 Respond with ONLY a JSON object of the form {"score": <0-100 integer>, "reason": "<one sentence>"}. No other text.`;
 
   const raw = await askClaude(prompt);
-  const parsed = JSON.parse(raw);
+  const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "");
+  const parsed = JSON.parse(cleaned);
 
-  if (typeof parsed.score !== "number" || typeof parsed.reason !== "string") {
+  if (
+    typeof parsed.score !== "number" ||
+    !Number.isInteger(parsed.score) ||
+    parsed.score < 0 ||
+    parsed.score > 100 ||
+    typeof parsed.reason !== "string"
+  ) {
     throw new Error(`Unexpected scoring response shape: ${raw}`);
   }
 
   return { score: parsed.score, reason: parsed.reason };
 }
 ```
+
+(Note: the guard strips markdown code fences before parsing, since Claude sometimes wraps JSON in ` ```json ... ``` ` despite being asked not to, and validates `score` is an integer in 0-100 rather than accepting any number — both added after Task 9's code review found a single out-of-range or fenced response would otherwise corrupt data or abort Task 12's whole scrape run.)
 
 - [ ] **Step 4: Run the test to verify it passes**
 
