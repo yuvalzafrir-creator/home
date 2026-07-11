@@ -2,14 +2,14 @@ import { z } from "zod";
 
 export const onboardingSchema = z.object({
   locations: z.array(z.string()).min(1),
-  budgetMax: z.number().positive(),
+  budgetMax: z.number().int().positive(),
   minRooms: z.number().positive().optional(),
-  minSizeSqm: z.number().positive().optional(),
+  minSizeSqm: z.number().int().positive().optional(),
   mustHaveExtras: z.array(z.string()).default([]),
   goal: z.enum(["primary", "investment"]),
   openToRenting: z.boolean().default(false),
   openToFixerUpper: z.boolean().default(false),
-  renovationBudget: z.number().nonnegative().optional(),
+  renovationBudget: z.number().int().nonnegative().optional(),
   freeText: z.string().optional(),
   exampleUrls: z.array(z.string().url()).default([]),
 });
