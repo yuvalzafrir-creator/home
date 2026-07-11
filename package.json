@@ -1,0 +1,34 @@
+{
+  "name": "feature-home-search-assistant",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "scrape": "tsx src/scraper/run.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.111.0",
+    "@prisma/client": "^7.8.0",
+    "next": "14.2.35",
+    "playwright": "^1.61.1",
+    "prisma": "^7.8.0",
+    "react": "^18",
+    "react-dom": "^18",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@vitejs/plugin-react": "^6.0.3",
+    "tsx": "^4.23.0",
+    "typescript": "^5",
+    "vitest": "^4.1.10"
+  }
+}
