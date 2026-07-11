@@ -30,4 +30,27 @@ describe("scoreListing", () => {
       scoreListing({ learnedSummary: "" } as any, { address: "X" } as any)
     ).rejects.toThrow();
   });
+
+  it("throws if the score is out of range", async () => {
+    vi.spyOn(claude, "askClaude").mockResolvedValue(
+      JSON.stringify({ score: 150, reason: "too high" })
+    );
+
+    await expect(
+      scoreListing({ learnedSummary: "" } as any, { address: "X" } as any)
+    ).rejects.toThrow();
+  });
+
+  it("strips markdown code fences before parsing", async () => {
+    vi.spyOn(claude, "askClaude").mockResolvedValue(
+      "```json\n" + JSON.stringify({ score: 80, reason: "fenced" }) + "\n```"
+    );
+
+    const result = await scoreListing(
+      { learnedSummary: "" } as any,
+      { address: "X" } as any
+    );
+
+    expect(result).toEqual({ score: 80, reason: "fenced" });
+  });
 });
