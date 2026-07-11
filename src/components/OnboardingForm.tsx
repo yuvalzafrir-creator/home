@@ -30,6 +30,7 @@ export function OnboardingForm() {
 
     const res = await fetch("/api/onboarding", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
@@ -52,7 +53,8 @@ export function OnboardingForm() {
       <label>Must-have extras (comma-separated, e.g. parking, mamad, balcony)<input name="mustHaveExtras" /></label>
       <label>
         Goal
-        <select name="goal" required>
+        <select name="goal" required defaultValue="">
+          <option value="" disabled>Select...</option>
           <option value="primary">Primary residence</option>
           <option value="investment">Investment</option>
         </select>
