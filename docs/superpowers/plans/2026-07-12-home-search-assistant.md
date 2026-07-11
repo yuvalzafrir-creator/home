@@ -1190,6 +1190,10 @@ git commit -m "feat: add feedback API route with learning-loop trigger"
 
 ## Task 12: Scraper Orchestration
 
+**Precondition (added after Task 6's review):** Task 6's fixture/selectors were built without access to Yad2's real live markup and were explicitly flagged as unverified. Before starting this task, inspect `https://www.yad2.co.il/realestate/forsale` in a real browser, compare its actual listing-card DOM to `tests/fixtures/yad2-search-results.html` and the CSS selectors in `src/scraper/yad2-parser.ts`, and update both to match reality. Do not proceed with the rest of this task until the parser has been checked against real markup — the whole pipeline depends on it.
+
+**Known risk this task must guard against:** if `parseListingsFromHtml` ever returns a listing with a missing `sourceUrl` (empty string) or a `NaN` numeric field (`price`/`rooms`/`sizeSqm`) — e.g. because Yad2's markup doesn't match a selector — inserting it would either throw on the `Listing.sourceUrl` unique-constraint (multiple empty-string rows collide) or write `NaN` into a Prisma `Int` column. Worse, once one empty-`sourceUrl` listing exists in the DB, `filterNewListings` would treat every subsequent malformed listing as "already seen" and silently drop it from every future run with no error surfaced. Step 3 below includes a validation/filter pass specifically to prevent this — don't skip it.
+
 **Files:**
 - Create: `src/scraper/run.ts`
 - Test: `tests/integration/pipeline.test.ts`
@@ -1269,6 +1273,55 @@ describe("runScrapePipeline", () => {
     expect(runs[0].success).toBe(false);
     expect(runs[0].errorMessage).toContain("ERR_CONNECTION_RESET");
   });
+
+  it("skips listings with no sourceUrl or NaN numeric fields instead of crashing or inserting bad data", async () => {
+    await db.preferenceProfile.create({
+      data: {
+        locations: JSON.stringify(["Tel Aviv"]),
+        budgetMax: 3000000,
+        mustHaveExtras: JSON.stringify([]),
+        goal: "primary",
+        exampleUrls: JSON.stringify([]),
+      },
+    });
+
+    vi.spyOn(scoring, "scoreListing").mockResolvedValue({ score: 80, reason: "Good match" });
+
+    const malformedHtml = `
+      <div class="feed-list">
+        <div class="feeditem" data-url="">
+          <span class="address">No URL St</span>
+          <span class="price">1,000,000</span>
+          <span class="rooms">3</span>
+          <span class="size">60</span>
+        </div>
+        <div class="feeditem" data-url="https://www.yad2.co.il/item/9999">
+          <span class="address">Bad Price St</span>
+          <span class="price">not-a-number</span>
+          <span class="rooms">3</span>
+          <span class="size">60</span>
+        </div>
+      </div>
+    `;
+    const playwright = await import("playwright");
+    (playwright.chromium.launch as any).mockResolvedValueOnce({
+      newPage: vi.fn().mockResolvedValue({
+        goto: vi.fn(),
+        content: vi.fn().mockResolvedValue(malformedHtml),
+      }),
+      close: vi.fn(),
+    });
+
+    await runScrapePipeline("https://www.yad2.co.il/realestate/forsale");
+
+    const listings = await db.listing.findMany();
+    expect(listings).toHaveLength(0);
+
+    const runs = await db.scrapeRun.findMany();
+    expect(runs).toHaveLength(1);
+    expect(runs[0].success).toBe(true);
+    expect(runs[0].newListings).toBe(0);
+  });
 });
 ```
 
@@ -1283,9 +1336,18 @@ Expected: FAIL — `Cannot find module '@/scraper/run'`.
 // src/scraper/run.ts
 import { chromium } from "playwright";
 import { db } from "@/lib/db";
-import { parseListingsFromHtml } from "@/scraper/yad2-parser";
+import { parseListingsFromHtml, type ParsedListing } from "@/scraper/yad2-parser";
 import { filterNewListings } from "@/scraper/dedup";
 import { scoreListing } from "@/lib/scoring";
+
+function isValidListing(listing: ParsedListing): boolean {
+  return (
+    listing.sourceUrl.length > 0 &&
+    !Number.isNaN(listing.price) &&
+    !Number.isNaN(listing.rooms) &&
+    !Number.isNaN(listing.sizeSqm)
+  );
+}
 
 export async function runScrapePipeline(searchUrl: string): Promise<void> {
   const run = await db.scrapeRun.create({ data: {} });
@@ -1299,9 +1361,17 @@ export async function runScrapePipeline(searchUrl: string): Promise<void> {
 
     const scraped = parseListingsFromHtml(html);
 
+    const validScraped = scraped.filter(isValidListing);
+    const skippedCount = scraped.length - validScraped.length;
+    if (skippedCount > 0) {
+      console.warn(
+        `runScrapePipeline: skipped ${skippedCount} listing(s) with a missing sourceUrl or malformed numeric field. This usually means Yad2's markup no longer matches the parser's selectors and they need updating.`
+      );
+    }
+
     const existing = await db.listing.findMany({ select: { sourceUrl: true } });
     const existingUrls = new Set(existing.map((l) => l.sourceUrl));
-    const newListings = filterNewListings(scraped, existingUrls);
+    const newListings = filterNewListings(validScraped, existingUrls);
 
     const profile = await db.preferenceProfile.findFirst({ orderBy: { createdAt: "desc" } });
 
@@ -1361,7 +1431,7 @@ if (require.main === module) {
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `npm test -- tests/integration/pipeline.test.ts`
-Expected: PASS (2 tests).
+Expected: PASS (3 tests).
 
 - [ ] **Step 5: Commit**
 
