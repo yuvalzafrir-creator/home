@@ -11,15 +11,25 @@ interface ScrapeRun {
   errorMessage: string | null;
 }
 
+type Status = { kind: "loading" } | { kind: "error" } | { kind: "loaded"; lastRun: ScrapeRun | null };
+
 export function HealthStatus() {
-  const [lastRun, setLastRun] = useState<ScrapeRun | null>(null);
+  const [status, setStatus] = useState<Status>({ kind: "loading" });
 
   useEffect(() => {
     fetch("/api/scrape-runs")
-      .then((res) => res.json())
-      .then((data) => setLastRun(data.lastRun));
+      .then((res) => {
+        if (!res.ok) throw new Error(`Unexpected status ${res.status}`);
+        return res.json();
+      })
+      .then((data) => setStatus({ kind: "loaded", lastRun: data.lastRun }))
+      .catch(() => setStatus({ kind: "error" }));
   }, []);
 
+  if (status.kind === "loading") return null;
+  if (status.kind === "error") return <p>Couldn't check scrape status — see server logs.</p>;
+
+  const lastRun = status.lastRun;
   if (!lastRun) return <p>No scrape has run yet.</p>;
 
   const notes = [
@@ -30,7 +40,7 @@ export function HealthStatus() {
   return (
     <p>
       Last scrape: {new Date(lastRun.startedAt).toLocaleString()} —{" "}
-      {lastRun.success ? `${lastRun.newListings} new listings` : `failed: ${lastRun.errorMessage}`}
+      {lastRun.success ? `${lastRun.newListings} new listings` : `failed: ${lastRun.errorMessage ?? "unknown error"}`}
       {notes.length > 0 && ` (${notes.join(", ")})`}
     </p>
   );
