@@ -15,6 +15,7 @@ interface Listing {
 
 export default function FeedPage() {
   const [listings, setListings] = useState<Listing[]>([]);
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetch("/api/listings")
@@ -23,12 +24,24 @@ export default function FeedPage() {
   }, []);
 
   async function handleFeedback(listingId: string, reaction: "like" | "dislike") {
-    await fetch("/api/feedback", {
+    if (pendingIds.has(listingId)) return;
+    setPendingIds((prev) => new Set(prev).add(listingId));
+
+    const res = await fetch("/api/feedback", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ listingId, reaction }),
     });
-    setListings((prev) => prev.filter((l) => l.id !== listingId));
+
+    if (res.ok) {
+      setListings((prev) => prev.filter((l) => l.id !== listingId));
+    } else {
+      setPendingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(listingId);
+        return next;
+      });
+    }
   }
 
   return (
@@ -36,7 +49,12 @@ export default function FeedPage() {
       <h1>New listings</h1>
       {listings.length === 0 && <p>No listings yet — check back after the next scrape.</p>}
       {listings.map((listing) => (
-        <ListingCard key={listing.id} {...listing} onFeedback={handleFeedback} />
+        <ListingCard
+          key={listing.id}
+          {...listing}
+          onFeedback={handleFeedback}
+          disabled={pendingIds.has(listing.id)}
+        />
       ))}
     </main>
   );

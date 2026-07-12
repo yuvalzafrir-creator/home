@@ -9,6 +9,7 @@ interface ListingCardProps {
   matchScore: number | null;
   matchReason: string | null;
   onFeedback: (id: string, reaction: "like" | "dislike") => void;
+  disabled: boolean;
 }
 
 export function ListingCard({
@@ -20,6 +21,7 @@ export function ListingCard({
   matchScore,
   matchReason,
   onFeedback,
+  disabled,
 }: ListingCardProps) {
   return (
     <article>
@@ -30,8 +32,8 @@ export function ListingCard({
           Match: {matchScore}/100 — {matchReason}
         </p>
       )}
-      <button onClick={() => onFeedback(id, "like")}>Like</button>
-      <button onClick={() => onFeedback(id, "dislike")}>Dislike</button>
+      <button onClick={() => onFeedback(id, "like")} disabled={disabled}>Like</button>
+      <button onClick={() => onFeedback(id, "dislike")} disabled={disabled}>Dislike</button>
     </article>
   );
 }
