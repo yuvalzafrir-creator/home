@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ListingCard } from "@/components/ListingCard";
+import { HealthStatus } from "@/components/HealthStatus";
 import type { Listing } from "@/types/listing";
 
 export default function FeedPage() {
@@ -37,6 +38,7 @@ export default function FeedPage() {
 
   return (
     <main>
+      <HealthStatus />
       <h1>New listings</h1>
       {listings.length === 0 && <p>No listings yet — check back after the next scrape.</p>}
       {listings.map((listing) => (
