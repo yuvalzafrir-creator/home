@@ -230,6 +230,8 @@ model ScrapeRun {
 }
 ```
 
+(`skippedListings` and `failedScoring` fields were added to this model in Task 12, after its code review found there was no way to distinguish "quiet day" from "broken scraper" — see Task 12's section for the follow-up migration.)
+
 - [ ] **Step 2: Run the initial migration**
 
 Run:
@@ -1219,6 +1221,8 @@ git commit -m "feat: add feedback API route with learning-loop trigger"
 
 **Known risk this task must guard against:** if `parseListingsFromHtml` ever returns a listing with a missing `sourceUrl` (empty string) or a `NaN` numeric field (`price`/`rooms`/`sizeSqm`) — e.g. because Yad2's markup doesn't match a selector — inserting it would either throw on the `Listing.sourceUrl` unique-constraint (multiple empty-string rows collide) or write `NaN` into a Prisma `Int` column. Worse, once one empty-`sourceUrl` listing exists in the DB, `filterNewListings` would treat every subsequent malformed listing as "already seen" and silently drop it from every future run with no error surfaced. Step 3 below includes a validation/filter pass specifically to prevent this — don't skip it.
 
+**Status update (post-implementation, both attempted and accepted as a known limitation):** the precondition above was attempted twice during this task — once via `curl`, once via a real Playwright chromium instance against the live URL — and both times Yad2 returned a Radware Bot Manager challenge page instead of real listings, so the parser's selectors in `src/scraper/yad2-parser.ts` and the fixture in `tests/fixtures/yad2-search-results.html` remain unverified against real markup. This was surfaced to the user, who chose to proceed with Playwright anyway and accept the scraper may be flaky/blocked in production, rather than switch to a different data-source strategy. Two mitigations were added as a result: (1) `runScrapePipeline` detects known Radware challenge-page markers and reports the run as a clear failure (`errorMessage` mentioning "anti-bot"/"Radware") rather than silently looking like a quiet day with zero new listings; (2) this detector is itself a best-effort heuristic (three keyword/regex checks) that hasn't been validated against a captured real challenge page or real listings page, so it could theoretically false-positive or false-negative — first real production run should have its `ScrapeRun.errorMessage` (or lack thereof) checked by hand once, and the fixture/selectors updated at that point if real markup differs from the placeholder.
+
 **Files:**
 - Create: `src/scraper/run.ts`
 - Test: `tests/integration/pipeline.test.ts`
@@ -1374,15 +1378,15 @@ function isValidListing(listing: ParsedListing): boolean {
   );
 }
 
-export async function runScrapePipeline(searchUrl: string): Promise<void> {
+export async function runScrapePipeline(searchUrl: string): Promise<{ success: boolean }> {
   const run = await db.scrapeRun.create({ data: {} });
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 
   try {
-    const browser = await chromium.launch();
+    browser = await chromium.launch();
     const page = await browser.newPage();
-    await page.goto(searchUrl);
+    await page.goto(searchUrl, { timeout: 15000 });
     const html = await page.content();
-    await browser.close();
 
     const scraped = parseListingsFromHtml(html);
 
@@ -1400,10 +1404,20 @@ export async function runScrapePipeline(searchUrl: string): Promise<void> {
 
     const profile = await db.preferenceProfile.findFirst({ orderBy: { createdAt: "desc" } });
 
+    let failedScoring = 0;
     for (const listing of newListings) {
-      const { score, reason } = profile
-        ? await scoreListing(profile, listing)
-        : { score: null, reason: null };
+      let score: number | null = null;
+      let reason: string | null = null;
+      if (profile) {
+        try {
+          const result = await scoreListing(profile, listing);
+          score = result.score;
+          reason = result.reason;
+        } catch (err) {
+          failedScoring++;
+          console.warn(`runScrapePipeline: failed to score listing ${listing.sourceUrl}, saving unscored:`, err);
+        }
+      }
 
       await db.listing.create({
         data: {
@@ -1428,8 +1442,15 @@ export async function runScrapePipeline(searchUrl: string): Promise<void> {
 
     await db.scrapeRun.update({
       where: { id: run.id },
-      data: { finishedAt: new Date(), success: true, newListings: newListings.length },
+      data: {
+        finishedAt: new Date(),
+        success: true,
+        newListings: newListings.length,
+        skippedListings: skippedCount,
+        failedScoring,
+      },
     });
+    return { success: true };
   } catch (err) {
     await db.scrapeRun.update({
       where: { id: run.id },
@@ -1439,19 +1460,24 @@ export async function runScrapePipeline(searchUrl: string): Promise<void> {
         errorMessage: err instanceof Error ? err.message : String(err),
       },
     });
+    return { success: false };
+  } finally {
+    await browser?.close();
   }
 }
 
 if (require.main === module) {
   const url = process.env.YAD2_SEARCH_URL ?? "https://www.yad2.co.il/realestate/forsale";
   runScrapePipeline(url)
-    .then(() => process.exit(0))
+    .then((result) => process.exit(result.success ? 0 : 1))
     .catch((err) => {
       console.error(err);
       process.exit(1);
     });
 }
 ```
+
+(A single bad `scoreListing` response no longer aborts the whole run — that listing is saved unscored instead, and `failedScoring` counts how many. `browser.close()` moved to a `finally` so navigation failures don't leak the Chromium process. The function now returns `{ success: boolean }` so the CLI entrypoint's exit code actually reflects whether the run succeeded — previously it always exited 0. All three fixes were added after Task 12's code review.)
 
 - [ ] **Step 4: Run the test to verify it passes**
 
@@ -1838,6 +1864,8 @@ interface ScrapeRun {
   startedAt: string;
   success: boolean;
   newListings: number;
+  skippedListings: number;
+  failedScoring: number;
   errorMessage: string | null;
 }
 
@@ -1852,14 +1880,22 @@ export function HealthStatus() {
 
   if (!lastRun) return <p>No scrape has run yet.</p>;
 
+  const notes = [
+    lastRun.skippedListings > 0 ? `${lastRun.skippedListings} skipped (bad data)` : null,
+    lastRun.failedScoring > 0 ? `${lastRun.failedScoring} unscored (Claude error)` : null,
+  ].filter(Boolean);
+
   return (
     <p>
       Last scrape: {new Date(lastRun.startedAt).toLocaleString()} —{" "}
       {lastRun.success ? `${lastRun.newListings} new listings` : `failed: ${lastRun.errorMessage}`}
+      {notes.length > 0 && ` (${notes.join(", ")})`}
     </p>
   );
 }
 ```
+
+(`skippedListings`/`failedScoring` surface Task 12's per-run counters, added after its code review, so a run that technically "succeeds" but silently dropped or under-scored listings — e.g. because Yad2's markup drifted from the parser's selectors — is visible here instead of only in server logs nobody watches.)
 
 - [ ] **Step 3: Wire it into the feed page**
 
