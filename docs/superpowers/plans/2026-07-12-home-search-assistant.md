@@ -230,6 +230,8 @@ model ScrapeRun {
 }
 ```
 
+(`skippedListings` and `failedScoring` fields were added to this model in Task 12, after its code review found there was no way to distinguish "quiet day" from "broken scraper" — see Task 12's section for the follow-up migration.)
+
 - [ ] **Step 2: Run the initial migration**
 
 Run:
@@ -1374,15 +1376,15 @@ function isValidListing(listing: ParsedListing): boolean {
   );
 }
 
-export async function runScrapePipeline(searchUrl: string): Promise<void> {
+export async function runScrapePipeline(searchUrl: string): Promise<{ success: boolean }> {
   const run = await db.scrapeRun.create({ data: {} });
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 
   try {
-    const browser = await chromium.launch();
+    browser = await chromium.launch();
     const page = await browser.newPage();
-    await page.goto(searchUrl);
+    await page.goto(searchUrl, { timeout: 15000 });
     const html = await page.content();
-    await browser.close();
 
     const scraped = parseListingsFromHtml(html);
 
@@ -1400,10 +1402,20 @@ export async function runScrapePipeline(searchUrl: string): Promise<void> {
 
     const profile = await db.preferenceProfile.findFirst({ orderBy: { createdAt: "desc" } });
 
+    let failedScoring = 0;
     for (const listing of newListings) {
-      const { score, reason } = profile
-        ? await scoreListing(profile, listing)
-        : { score: null, reason: null };
+      let score: number | null = null;
+      let reason: string | null = null;
+      if (profile) {
+        try {
+          const result = await scoreListing(profile, listing);
+          score = result.score;
+          reason = result.reason;
+        } catch (err) {
+          failedScoring++;
+          console.warn(`runScrapePipeline: failed to score listing ${listing.sourceUrl}, saving unscored:`, err);
+        }
+      }
 
       await db.listing.create({
         data: {
@@ -1428,8 +1440,15 @@ export async function runScrapePipeline(searchUrl: string): Promise<void> {
 
     await db.scrapeRun.update({
       where: { id: run.id },
-      data: { finishedAt: new Date(), success: true, newListings: newListings.length },
+      data: {
+        finishedAt: new Date(),
+        success: true,
+        newListings: newListings.length,
+        skippedListings: skippedCount,
+        failedScoring,
+      },
     });
+    return { success: true };
   } catch (err) {
     await db.scrapeRun.update({
       where: { id: run.id },
@@ -1439,19 +1458,24 @@ export async function runScrapePipeline(searchUrl: string): Promise<void> {
         errorMessage: err instanceof Error ? err.message : String(err),
       },
     });
+    return { success: false };
+  } finally {
+    await browser?.close();
   }
 }
 
 if (require.main === module) {
   const url = process.env.YAD2_SEARCH_URL ?? "https://www.yad2.co.il/realestate/forsale";
   runScrapePipeline(url)
-    .then(() => process.exit(0))
+    .then((result) => process.exit(result.success ? 0 : 1))
     .catch((err) => {
       console.error(err);
       process.exit(1);
     });
 }
 ```
+
+(A single bad `scoreListing` response no longer aborts the whole run — that listing is saved unscored instead, and `failedScoring` counts how many. `browser.close()` moved to a `finally` so navigation failures don't leak the Chromium process. The function now returns `{ success: boolean }` so the CLI entrypoint's exit code actually reflects whether the run succeeded — previously it always exited 0. All three fixes were added after Task 12's code review.)
 
 - [ ] **Step 4: Run the test to verify it passes**
 
@@ -1838,6 +1862,8 @@ interface ScrapeRun {
   startedAt: string;
   success: boolean;
   newListings: number;
+  skippedListings: number;
+  failedScoring: number;
   errorMessage: string | null;
 }
 
@@ -1852,14 +1878,22 @@ export function HealthStatus() {
 
   if (!lastRun) return <p>No scrape has run yet.</p>;
 
+  const notes = [
+    lastRun.skippedListings > 0 ? `${lastRun.skippedListings} skipped (bad data)` : null,
+    lastRun.failedScoring > 0 ? `${lastRun.failedScoring} unscored (Claude error)` : null,
+  ].filter(Boolean);
+
   return (
     <p>
       Last scrape: {new Date(lastRun.startedAt).toLocaleString()} —{" "}
       {lastRun.success ? `${lastRun.newListings} new listings` : `failed: ${lastRun.errorMessage}`}
+      {notes.length > 0 && ` (${notes.join(", ")})`}
     </p>
   );
 }
 ```
+
+(`skippedListings`/`failedScoring` surface Task 12's per-run counters, added after its code review, so a run that technically "succeeds" but silently dropped or under-scored listings — e.g. because Yad2's markup drifted from the parser's selectors — is visible here instead of only in server logs nobody watches.)
 
 - [ ] **Step 3: Wire it into the feed page**
 
