@@ -2,16 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ListingCard } from "@/components/ListingCard";
-
-interface Listing {
-  id: string;
-  address: string;
-  price: number;
-  rooms: number;
-  sizeSqm: number;
-  matchScore: number | null;
-  matchReason: string | null;
-}
+import type { Listing } from "@/types/listing";
 
 export default function FeedPage() {
   const [listings, setListings] = useState<Listing[]>([]);

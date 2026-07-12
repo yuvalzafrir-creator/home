@@ -1,11 +1,6 @@
-interface CompareListing {
-  id: string;
-  address: string;
-  price: number;
-  rooms: number;
-  sizeSqm: number;
-  matchScore: number | null;
-}
+import type { Listing } from "@/types/listing";
+
+type CompareListing = Pick<Listing, "id" | "address" | "price" | "rooms" | "sizeSqm" | "matchScore">;
 
 export function CompareTable({ listings }: { listings: CompareListing[] }) {
   const rows: { label: string; get: (l: CompareListing) => string | number }[] = [

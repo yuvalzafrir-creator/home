@@ -2,15 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CompareTable } from "@/components/CompareTable";
-
-interface Listing {
-  id: string;
-  address: string;
-  price: number;
-  rooms: number;
-  sizeSqm: number;
-  matchScore: number | null;
-}
+import type { Listing } from "@/types/listing";
 
 export default function ComparePage() {
   const [listings, setListings] = useState<Listing[]>([]);
@@ -35,19 +27,24 @@ export default function ComparePage() {
       <h1>Compare</h1>
       <p>Select 2-4 favorites to compare:</p>
       <ul>
-        {listings.map((l) => (
-          <li key={l.id}>
-            <label>
-              <input
-                type="checkbox"
-                checked={selectedIds.includes(l.id)}
-                onChange={() => toggle(l.id)}
-              />
-              {l.address}
-            </label>
-          </li>
-        ))}
+        {listings.map((l) => {
+          const atCap = selectedIds.length >= 4 && !selectedIds.includes(l.id);
+          return (
+            <li key={l.id}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={selectedIds.includes(l.id)}
+                  onChange={() => toggle(l.id)}
+                  disabled={atCap}
+                />
+                {l.address}
+              </label>
+            </li>
+          );
+        })}
       </ul>
+      {selectedIds.length >= 4 && <p>Max 4 selected — deselect one to choose another.</p>}
       {selected.length >= 2 && <CompareTable listings={selected} />}
     </main>
   );
