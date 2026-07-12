@@ -37,13 +37,14 @@ export default function ListingsHistoryPage() {
       body: JSON.stringify({ listingId, reaction }),
     });
 
-    setPendingIds((prev) => {
-      const next = new Set(prev);
-      next.delete(listingId);
-      return next;
-    });
-
-    if (!res.ok) return;
+    if (!res.ok) {
+      setPendingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(listingId);
+        return next;
+      });
+      return;
+    }
 
     // Re-fetch so the current filter reflects the new reaction (e.g. a like should
     // appear immediately under "favorites"; unlike Task 13's feed, we don't remove
@@ -53,6 +54,15 @@ export default function ListingsHistoryPage() {
     const refreshed = await fetch(`/api/listings${query}`);
     const data = await refreshed.json();
     setListings(data.listings);
+
+    // Only clear the pending guard once the whole success path (including the
+    // refetch) has completed, so a fast second click during the refetch window
+    // can't slip past the guard and create a duplicate Feedback row.
+    setPendingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(listingId);
+      return next;
+    });
   }
 
   return (
