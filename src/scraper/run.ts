@@ -14,9 +14,24 @@ function isValidListing(listing: ParsedListing): boolean {
   );
 }
 
+function looksLikeBotChallenge(html: string): boolean {
+  return (
+    html.includes("Radware Page") ||
+    html.includes("verify-message") ||
+    /Incident ID/i.test(html)
+  );
+}
+
 export async function runScrapePipeline(searchUrl: string): Promise<{ success: boolean }> {
   const run = await db.scrapeRun.create({ data: {} });
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+
+  // Declared outside the try block so the catch handler can report an
+  // accurate best-effort count of what happened before a mid-run crash,
+  // instead of silently leaving these at their DB defaults of 0.
+  let skippedCount = 0;
+  let createdCount = 0;
+  let failedScoring = 0;
 
   try {
     browser = await chromium.launch();
@@ -24,10 +39,16 @@ export async function runScrapePipeline(searchUrl: string): Promise<{ success: b
     await page.goto(searchUrl, { timeout: 15000 });
     const html = await page.content();
 
+    if (looksLikeBotChallenge(html)) {
+      throw new Error(
+        "Blocked by anti-bot challenge page (Radware) — Yad2 did not return real listings"
+      );
+    }
+
     const scraped = parseListingsFromHtml(html);
 
     const validScraped = scraped.filter(isValidListing);
-    const skippedCount = scraped.length - validScraped.length;
+    skippedCount = scraped.length - validScraped.length;
     if (skippedCount > 0) {
       console.warn(
         `runScrapePipeline: skipped ${skippedCount} listing(s) with a missing sourceUrl or malformed numeric field. This usually means Yad2's markup no longer matches the parser's selectors and they need updating.`
@@ -40,7 +61,6 @@ export async function runScrapePipeline(searchUrl: string): Promise<{ success: b
 
     const profile = await db.preferenceProfile.findFirst({ orderBy: { createdAt: "desc" } });
 
-    let failedScoring = 0;
     for (const listing of newListings) {
       let score: number | null = null;
       let reason: string | null = null;
@@ -78,6 +98,7 @@ export async function runScrapePipeline(searchUrl: string): Promise<{ success: b
           matchReason: reason,
         },
       });
+      createdCount++;
     }
 
     await db.scrapeRun.update({
@@ -85,7 +106,7 @@ export async function runScrapePipeline(searchUrl: string): Promise<{ success: b
       data: {
         finishedAt: new Date(),
         success: true,
-        newListings: newListings.length,
+        newListings: createdCount,
         skippedListings: skippedCount,
         failedScoring,
       },
@@ -98,6 +119,9 @@ export async function runScrapePipeline(searchUrl: string): Promise<{ success: b
       data: {
         finishedAt: new Date(),
         success: false,
+        newListings: createdCount,
+        skippedListings: skippedCount,
+        failedScoring,
         errorMessage: err instanceof Error ? err.message : String(err),
       },
     });

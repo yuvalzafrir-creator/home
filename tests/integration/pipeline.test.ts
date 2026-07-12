@@ -162,4 +162,36 @@ describe("runScrapePipeline", () => {
     expect(runs[0].newListings).toBe(2);
     expect(runs[0].failedScoring).toBe(1);
   });
+
+  it("logs a failed ScrapeRun and persists nothing when the page is a Radware bot challenge", async () => {
+    const challengeHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head><title>Radware Page</title></head>
+        <body>
+          <div class="verify-message">Please wait while we verify you are human.</div>
+          <!-- Incident ID: 12345-67890 -->
+        </body>
+      </html>
+    `;
+    const playwright = await import("playwright");
+    (playwright.chromium.launch as any).mockResolvedValueOnce({
+      newPage: vi.fn().mockResolvedValue({
+        goto: vi.fn(),
+        content: vi.fn().mockResolvedValue(challengeHtml),
+      }),
+      close: vi.fn(),
+    });
+
+    const result = await runScrapePipeline("https://www.yad2.co.il/realestate/forsale");
+    expect(result).toEqual({ success: false });
+
+    const listings = await db.listing.findMany();
+    expect(listings).toHaveLength(0);
+
+    const runs = await db.scrapeRun.findMany();
+    expect(runs).toHaveLength(1);
+    expect(runs[0].success).toBe(false);
+    expect(runs[0].errorMessage).toMatch(/anti-bot|radware/i);
+  });
 });
