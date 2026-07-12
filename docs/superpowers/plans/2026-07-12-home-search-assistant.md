@@ -829,7 +829,7 @@ export async function askClaude(prompt: string): Promise<string> {
     messages: [{ role: "user", content: prompt }],
   });
   const block = response.content[0];
-  return block.type === "text" ? block.text : "";
+  return block?.type === "text" ? block.text : "";
 }
 ```
 
@@ -921,15 +921,24 @@ ${JSON.stringify(listing, null, 2)}
 Respond with ONLY a JSON object of the form {"score": <0-100 integer>, "reason": "<one sentence>"}. No other text.`;
 
   const raw = await askClaude(prompt);
-  const parsed = JSON.parse(raw);
+  const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "");
+  const parsed = JSON.parse(cleaned);
 
-  if (typeof parsed.score !== "number" || typeof parsed.reason !== "string") {
+  if (
+    typeof parsed.score !== "number" ||
+    !Number.isInteger(parsed.score) ||
+    parsed.score < 0 ||
+    parsed.score > 100 ||
+    typeof parsed.reason !== "string"
+  ) {
     throw new Error(`Unexpected scoring response shape: ${raw}`);
   }
 
   return { score: parsed.score, reason: parsed.reason };
 }
 ```
+
+(Note: the guard strips markdown code fences before parsing, since Claude sometimes wraps JSON in ` ```json ... ``` ` despite being asked not to, and validates `score` is an integer in 0-100 rather than accepting any number — both added after Task 9's code review found a single out-of-range or fenced response would otherwise corrupt data or abort Task 12's whole scrape run.)
 
 - [ ] **Step 4: Run the test to verify it passes**
 
@@ -1025,14 +1034,22 @@ ${feedbackLines || "none yet"}
 
 Rewrite the learned summary in 2-4 sentences, incorporating what the feedback reveals about their real preferences (e.g. patterns in what they liked or disliked). Respond with ONLY the summary text, no preamble.`;
 
-  return askClaude(prompt);
+  const summary = await askClaude(prompt);
+
+  if (!summary.trim()) {
+    throw new Error("updateLearnedSummary: Claude returned an empty summary");
+  }
+
+  return summary;
 }
 ```
+
+(Note: the empty-summary guard was added after Task 10's code review — without it, an empty Claude response silently overwrites `learnedSummary` and degrades every future prompt with no error surfaced.)
 
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `npm test -- tests/unit/preference-profile.test.ts`
-Expected: PASS (1 test).
+Expected: PASS (5 tests — the original test plus 4 added during review: empty feedback → "none yet", null learnedSummary → "none yet", empty mustHaveExtras → "none", and empty Claude response → rejects).
 
 - [ ] **Step 5: Commit**
 
@@ -1044,6 +1061,8 @@ git commit -m "feat: add preference profile learning from feedback"
 ---
 
 ## Task 11: Feedback API Route
+
+**Note (added after Task 10's review):** `updateLearnedSummary` now throws on an empty Claude response, and any Claude API error also propagates as a throw. The route below calls it *after* `db.feedback.create` has already succeeded — without a try/catch around the refresh block, a Claude hiccup would turn an otherwise-successful feedback submission into a 500 for the user, even though their like/dislike was already saved. Step 3's implementation wraps the refresh call accordingly; don't remove that try/catch when implementing.
 
 **Files:**
 - Create: `src/app/api/feedback/route.ts`
@@ -1160,19 +1179,25 @@ export async function POST(req: Request) {
   if (totalFeedback % REFRESH_EVERY_N_FEEDBACK === 0) {
     const profile = await db.preferenceProfile.findFirst({ orderBy: { createdAt: "desc" } });
     if (profile) {
-      const recent = await db.feedback.findMany({
-        orderBy: { createdAt: "desc" },
-        take: REFRESH_EVERY_N_FEEDBACK,
-        include: { listing: { select: { address: true, floor: true } } },
-      });
-      const learnedSummary = await updateLearnedSummary(profile, recent as any);
-      await db.preferenceProfile.update({ where: { id: profile.id }, data: { learnedSummary } });
+      try {
+        const recent = await db.feedback.findMany({
+          orderBy: { createdAt: "desc" },
+          take: REFRESH_EVERY_N_FEEDBACK,
+          include: { listing: { select: { address: true, floor: true } } },
+        });
+        const learnedSummary = await updateLearnedSummary(profile, recent as any);
+        await db.preferenceProfile.update({ where: { id: profile.id }, data: { learnedSummary } });
+      } catch (err) {
+        console.error("Failed to refresh learned summary:", err);
+      }
     }
   }
 
   return NextResponse.json({ feedback });
 }
 ```
+
+(The try/catch means a Claude failure during the learning-refresh doesn't fail the feedback submission itself — the user's like/dislike is already saved by this point; the summary just doesn't get refreshed this time and will retry on the next 3rd event.)
 
 - [ ] **Step 4: Run the test to verify it passes**
 
@@ -1189,6 +1214,10 @@ git commit -m "feat: add feedback API route with learning-loop trigger"
 ---
 
 ## Task 12: Scraper Orchestration
+
+**Precondition (added after Task 6's review):** Task 6's fixture/selectors were built without access to Yad2's real live markup and were explicitly flagged as unverified. Before starting this task, inspect `https://www.yad2.co.il/realestate/forsale` in a real browser, compare its actual listing-card DOM to `tests/fixtures/yad2-search-results.html` and the CSS selectors in `src/scraper/yad2-parser.ts`, and update both to match reality. Do not proceed with the rest of this task until the parser has been checked against real markup — the whole pipeline depends on it.
+
+**Known risk this task must guard against:** if `parseListingsFromHtml` ever returns a listing with a missing `sourceUrl` (empty string) or a `NaN` numeric field (`price`/`rooms`/`sizeSqm`) — e.g. because Yad2's markup doesn't match a selector — inserting it would either throw on the `Listing.sourceUrl` unique-constraint (multiple empty-string rows collide) or write `NaN` into a Prisma `Int` column. Worse, once one empty-`sourceUrl` listing exists in the DB, `filterNewListings` would treat every subsequent malformed listing as "already seen" and silently drop it from every future run with no error surfaced. Step 3 below includes a validation/filter pass specifically to prevent this — don't skip it.
 
 **Files:**
 - Create: `src/scraper/run.ts`
@@ -1269,6 +1298,55 @@ describe("runScrapePipeline", () => {
     expect(runs[0].success).toBe(false);
     expect(runs[0].errorMessage).toContain("ERR_CONNECTION_RESET");
   });
+
+  it("skips listings with no sourceUrl or NaN numeric fields instead of crashing or inserting bad data", async () => {
+    await db.preferenceProfile.create({
+      data: {
+        locations: JSON.stringify(["Tel Aviv"]),
+        budgetMax: 3000000,
+        mustHaveExtras: JSON.stringify([]),
+        goal: "primary",
+        exampleUrls: JSON.stringify([]),
+      },
+    });
+
+    vi.spyOn(scoring, "scoreListing").mockResolvedValue({ score: 80, reason: "Good match" });
+
+    const malformedHtml = `
+      <div class="feed-list">
+        <div class="feeditem" data-url="">
+          <span class="address">No URL St</span>
+          <span class="price">1,000,000</span>
+          <span class="rooms">3</span>
+          <span class="size">60</span>
+        </div>
+        <div class="feeditem" data-url="https://www.yad2.co.il/item/9999">
+          <span class="address">Bad Price St</span>
+          <span class="price">not-a-number</span>
+          <span class="rooms">3</span>
+          <span class="size">60</span>
+        </div>
+      </div>
+    `;
+    const playwright = await import("playwright");
+    (playwright.chromium.launch as any).mockResolvedValueOnce({
+      newPage: vi.fn().mockResolvedValue({
+        goto: vi.fn(),
+        content: vi.fn().mockResolvedValue(malformedHtml),
+      }),
+      close: vi.fn(),
+    });
+
+    await runScrapePipeline("https://www.yad2.co.il/realestate/forsale");
+
+    const listings = await db.listing.findMany();
+    expect(listings).toHaveLength(0);
+
+    const runs = await db.scrapeRun.findMany();
+    expect(runs).toHaveLength(1);
+    expect(runs[0].success).toBe(true);
+    expect(runs[0].newListings).toBe(0);
+  });
 });
 ```
 
@@ -1283,9 +1361,18 @@ Expected: FAIL — `Cannot find module '@/scraper/run'`.
 // src/scraper/run.ts
 import { chromium } from "playwright";
 import { db } from "@/lib/db";
-import { parseListingsFromHtml } from "@/scraper/yad2-parser";
+import { parseListingsFromHtml, type ParsedListing } from "@/scraper/yad2-parser";
 import { filterNewListings } from "@/scraper/dedup";
 import { scoreListing } from "@/lib/scoring";
+
+function isValidListing(listing: ParsedListing): boolean {
+  return (
+    listing.sourceUrl.length > 0 &&
+    !Number.isNaN(listing.price) &&
+    !Number.isNaN(listing.rooms) &&
+    !Number.isNaN(listing.sizeSqm)
+  );
+}
 
 export async function runScrapePipeline(searchUrl: string): Promise<void> {
   const run = await db.scrapeRun.create({ data: {} });
@@ -1299,9 +1386,17 @@ export async function runScrapePipeline(searchUrl: string): Promise<void> {
 
     const scraped = parseListingsFromHtml(html);
 
+    const validScraped = scraped.filter(isValidListing);
+    const skippedCount = scraped.length - validScraped.length;
+    if (skippedCount > 0) {
+      console.warn(
+        `runScrapePipeline: skipped ${skippedCount} listing(s) with a missing sourceUrl or malformed numeric field. This usually means Yad2's markup no longer matches the parser's selectors and they need updating.`
+      );
+    }
+
     const existing = await db.listing.findMany({ select: { sourceUrl: true } });
     const existingUrls = new Set(existing.map((l) => l.sourceUrl));
-    const newListings = filterNewListings(scraped, existingUrls);
+    const newListings = filterNewListings(validScraped, existingUrls);
 
     const profile = await db.preferenceProfile.findFirst({ orderBy: { createdAt: "desc" } });
 
@@ -1361,7 +1456,7 @@ if (require.main === module) {
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `npm test -- tests/integration/pipeline.test.ts`
-Expected: PASS (2 tests).
+Expected: PASS (3 tests).
 
 - [ ] **Step 5: Commit**
 
@@ -1482,6 +1577,7 @@ export default function FeedPage() {
   async function handleFeedback(listingId: string, reaction: "like" | "dislike") {
     await fetch("/api/feedback", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ listingId, reaction }),
     });
     setListings((prev) => prev.filter((l) => l.id !== listingId));
@@ -1553,6 +1649,7 @@ export default function ListingsHistoryPage() {
   async function handleFeedback(listingId: string, reaction: "like" | "dislike") {
     await fetch("/api/feedback", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ listingId, reaction }),
     });
   }
