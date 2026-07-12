@@ -24,6 +24,16 @@ const db = new PrismaClient();
 test.describe("feed and feedback", () => {
   let listingId: string;
   let address: string;
+  // Snapshot of the newest PreferenceProfile's learnedSummary, taken before
+  // the Like click. /api/feedback decides whether to refresh the learned
+  // summary using a GLOBAL db.feedback.count() (not scoped to this test) and,
+  // if it fires, overwrites the newest PreferenceProfile in the ENTIRE table
+  // — not one this test owns. This is a full safety net, not conditional on
+  // whether we think the trigger will fire: we always snapshot and always
+  // restore, so a real dev PreferenceProfile.learnedSummary can never be left
+  // corrupted by this test once ANTHROPIC_API_KEY is populated for real.
+  let profileBeforeId: string | null;
+  let profileBeforeSummary: string | null;
 
   test.beforeEach(async () => {
     // Real scraping is currently blocked by Yad2's bot detection (Task 12),
@@ -44,6 +54,10 @@ test.describe("feed and feedback", () => {
       },
     });
     listingId = listing.id;
+
+    const profileBefore = await db.preferenceProfile.findFirst({ orderBy: { createdAt: "desc" } });
+    profileBeforeId = profileBefore?.id ?? null;
+    profileBeforeSummary = profileBefore?.learnedSummary ?? null;
   });
 
   test.afterEach(async () => {
@@ -53,6 +67,16 @@ test.describe("feed and feedback", () => {
     // /api/feedback with stale counts.
     await db.feedback.deleteMany({ where: { listingId } });
     await db.listing.delete({ where: { id: listingId } });
+
+    // Restore whatever learnedSummary existed on the newest PreferenceProfile
+    // before this test ran, regardless of whether the refresh actually
+    // fired. See the note above beforeEach for why this is unconditional.
+    if (profileBeforeId) {
+      await db.preferenceProfile.update({
+        where: { id: profileBeforeId },
+        data: { learnedSummary: profileBeforeSummary },
+      });
+    }
   });
 
   test.afterAll(async () => {
