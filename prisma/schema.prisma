@@ -59,10 +59,12 @@ model Feedback {
 }
 
 model ScrapeRun {
-  id           String    @id @default(cuid())
-  startedAt    DateTime  @default(now())
-  finishedAt   DateTime?
-  success      Boolean   @default(false)
-  newListings  Int       @default(0)
-  errorMessage String?
+  id              String    @id @default(cuid())
+  startedAt       DateTime  @default(now())
+  finishedAt      DateTime?
+  success         Boolean   @default(false)
+  newListings     Int       @default(0)
+  skippedListings Int       @default(0)
+  failedScoring   Int       @default(0)
+  errorMessage    String?
 }

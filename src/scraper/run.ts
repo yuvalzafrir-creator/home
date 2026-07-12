@@ -14,15 +14,15 @@ function isValidListing(listing: ParsedListing): boolean {
   );
 }
 
-export async function runScrapePipeline(searchUrl: string): Promise<void> {
+export async function runScrapePipeline(searchUrl: string): Promise<{ success: boolean }> {
   const run = await db.scrapeRun.create({ data: {} });
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 
   try {
-    const browser = await chromium.launch();
+    browser = await chromium.launch();
     const page = await browser.newPage();
-    await page.goto(searchUrl);
+    await page.goto(searchUrl, { timeout: 15000 });
     const html = await page.content();
-    await browser.close();
 
     const scraped = parseListingsFromHtml(html);
 
@@ -40,10 +40,24 @@ export async function runScrapePipeline(searchUrl: string): Promise<void> {
 
     const profile = await db.preferenceProfile.findFirst({ orderBy: { createdAt: "desc" } });
 
+    let failedScoring = 0;
     for (const listing of newListings) {
-      const { score, reason } = profile
-        ? await scoreListing(profile, listing)
-        : { score: null, reason: null };
+      let score: number | null = null;
+      let reason: string | null = null;
+
+      if (profile) {
+        try {
+          const result = await scoreListing(profile, listing);
+          score = result.score;
+          reason = result.reason;
+        } catch (err) {
+          failedScoring++;
+          console.warn(
+            `runScrapePipeline: failed to score listing ${listing.sourceUrl}, saving unscored:`,
+            err
+          );
+        }
+      }
 
       await db.listing.create({
         data: {
@@ -68,8 +82,16 @@ export async function runScrapePipeline(searchUrl: string): Promise<void> {
 
     await db.scrapeRun.update({
       where: { id: run.id },
-      data: { finishedAt: new Date(), success: true, newListings: newListings.length },
+      data: {
+        finishedAt: new Date(),
+        success: true,
+        newListings: newListings.length,
+        skippedListings: skippedCount,
+        failedScoring,
+      },
     });
+
+    return { success: true };
   } catch (err) {
     await db.scrapeRun.update({
       where: { id: run.id },
@@ -79,13 +101,17 @@ export async function runScrapePipeline(searchUrl: string): Promise<void> {
         errorMessage: err instanceof Error ? err.message : String(err),
       },
     });
+
+    return { success: false };
+  } finally {
+    await browser?.close();
   }
 }
 
 if (require.main === module) {
   const url = process.env.YAD2_SEARCH_URL ?? "https://www.yad2.co.il/realestate/forsale";
   runScrapePipeline(url)
-    .then(() => process.exit(0))
+    .then((result) => process.exit(result.success ? 0 : 1))
     .catch((err) => {
       console.error(err);
       process.exit(1);
