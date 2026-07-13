@@ -1,58 +1,60 @@
-"use client";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { db } from "@/lib/db";
+import { getProfile } from "@/lib/profile";
 
-import { useEffect, useState } from "react";
-import { ListingCard } from "@/components/ListingCard";
-import type { Listing } from "@/types/listing";
+export default async function DashboardPage() {
+  const profile = await getProfile();
+  if (!profile) redirect("/onboarding");
 
-export default function FeedPage() {
-  const [listings, setListings] = useState<Listing[]>([]);
-  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    fetch("/api/listings")
-      .then((res) => res.json())
-      .then((data) => setListings(data.listings));
-  }, []);
-
-  async function handleFeedback(listingId: string, reaction: "like" | "dislike") {
-    if (pendingIds.has(listingId)) return;
-    setPendingIds((prev) => new Set(prev).add(listingId));
-
-    const res = await fetch("/api/feedback", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ listingId, reaction }),
-    });
-
-    if (res.ok) {
-      setListings((prev) => prev.filter((l) => l.id !== listingId));
-    } else {
-      setPendingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(listingId);
-        return next;
-      });
-    }
-  }
+  const favorites = await db.listing.findMany({
+    where: { feedback: { some: { reaction: "like" } } },
+    orderBy: { matchScore: "desc" },
+  });
+  const newCount = await db.listing.count({ where: { feedback: { none: {} } } });
 
   return (
     <main>
-      <h1>New listings</h1>
-      <p className="page-subtitle">Fresh matches to review — like the ones worth a closer look.</p>
-      {listings.length === 0 ? (
-        <div className="empty">No listings yet — check back after the next scrape.</div>
-      ) : (
-        <div className="card-list">
-          {listings.map((listing) => (
-            <ListingCard
-              key={listing.id}
-              {...listing}
-              onFeedback={handleFeedback}
-              disabled={pendingIds.has(listing.id)}
-            />
-          ))}
+      <h1>לוח בקרה</h1>
+      <p className="page-subtitle">ההעדפות והמודעות השמורות שלך במקום אחד.</p>
+
+      <section className="dash-section">
+        <div className="dash-section__head">
+          <h2>הפרופיל שלך</h2>
+          <Link href="/profile" className="dash-link">עריכה ←</Link>
         </div>
-      )}
+        <div className="dash-tiles">
+          <div className="dash-tile"><span>אזורים</span><strong>{profile.locations.join(", ")}</strong></div>
+          <div className="dash-tile"><span>תקציב</span><strong>₪{profile.budgetMax.toLocaleString()}</strong></div>
+          <div className="dash-tile"><span>חדרים</span><strong>{profile.minRooms ? `${profile.minRooms}+` : "—"}</strong></div>
+        </div>
+      </section>
+
+      <section className="dash-section">
+        <div className="dash-section__head">
+          <h2>שמורים · מועדפים</h2>
+          <Link href="/listings" className="dash-link">{newCount} מודעות חדשות ←</Link>
+        </div>
+        {favorites.length === 0 ? (
+          <div className="empty">עדיין אין מועדפים — עברו על המודעות וסמנו את מה שמעניין.</div>
+        ) : (
+          <div className="card-list">
+            {favorites.map((l) => (
+              <article className="listing" key={l.id}>
+                <h3>{l.address}</h3>
+                <p className="listing__meta">
+                  ₪{l.price.toLocaleString()} · {l.rooms} חד&apos; · {l.sizeSqm} מ&quot;ר
+                  {l.matchScore !== null ? ` · ${l.matchScore}/100` : ""}
+                </p>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="dash-section">
+        <Link href="/compare" className="dash-cta">השוואת מועדפים ←</Link>
+      </section>
     </main>
   );
 }
