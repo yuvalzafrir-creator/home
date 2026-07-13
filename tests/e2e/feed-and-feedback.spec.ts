@@ -83,17 +83,18 @@ test.describe("feed and feedback", () => {
     await db.$disconnect();
   });
 
-  test("liking a listing removes it from the feed", async ({ page }) => {
-    await page.goto("/");
+  test("liking a listing marks it as a favorite", async ({ page }) => {
+    await page.goto("/listings");
 
     const card = page.locator("article").filter({ hasText: address });
     await expect(card).toHaveCount(1);
 
-    // Playwright's getByText does case-insensitive substring matching by
-    // default, so a plain getByText("Like") also matches the "Dislike"
-    // button. Scope to the exact button role/name instead.
-    await card.getByRole("button", { name: "Like", exact: true }).click();
+    await card.getByRole("button", { name: "שמור", exact: true }).click();
 
-    await expect(page.locator("article").filter({ hasText: address })).toHaveCount(0);
+    // The listings view keeps items after feedback (it's a browsing/history
+    // view, not a triage queue). Switch to the favorites filter and confirm
+    // the liked listing now appears there.
+    await page.selectOption("select#filter", "favorites");
+    await expect(page.locator("article").filter({ hasText: address })).toHaveCount(1);
   });
 });

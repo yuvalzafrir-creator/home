@@ -22,23 +22,40 @@ if (!process.env.DATABASE_URL?.includes("dev.db")) {
 
 const db = new PrismaClient();
 
+type ProfileRow = Awaited<ReturnType<typeof db.preferenceProfile.findFirst>>;
+
 test.describe("onboarding", () => {
-  let existingProfileIds: Set<string>;
+  let snapshot: NonNullable<ProfileRow>[];
 
   test.beforeEach(async () => {
-    const existing = await db.preferenceProfile.findMany({ select: { id: true } });
-    existingProfileIds = new Set(existing.map((p) => p.id));
+    // Snapshot and clear so the onboarding gate lets us reach the form.
+    snapshot = await db.preferenceProfile.findMany();
+    await db.preferenceProfile.deleteMany();
   });
 
   test.afterEach(async () => {
-    // The onboarding API always inserts a new PreferenceProfile row (no
-    // upsert), so every run of this test leaves one behind. Delete only the
-    // row(s) this run created so the suite is repeatable and doesn't pollute
-    // the dev database.
-    const all = await db.preferenceProfile.findMany({ select: { id: true } });
-    const newIds = all.map((p) => p.id).filter((id) => !existingProfileIds.has(id));
-    if (newIds.length > 0) {
-      await db.preferenceProfile.deleteMany({ where: { id: { in: newIds } } });
+    // Remove whatever the test created, then restore the real dev profile(s)
+    // exactly as they were (explicit ids + createdAt; updatedAt is @updatedAt).
+    await db.preferenceProfile.deleteMany();
+    for (const p of snapshot) {
+      await db.preferenceProfile.create({
+        data: {
+          id: p.id,
+          locations: p.locations,
+          budgetMax: p.budgetMax,
+          minRooms: p.minRooms,
+          minSizeSqm: p.minSizeSqm,
+          mustHaveExtras: p.mustHaveExtras,
+          goal: p.goal,
+          openToRenting: p.openToRenting,
+          openToFixerUpper: p.openToFixerUpper,
+          renovationBudget: p.renovationBudget,
+          freeText: p.freeText,
+          exampleUrls: p.exampleUrls,
+          learnedSummary: p.learnedSummary,
+          createdAt: p.createdAt,
+        },
+      });
     }
   });
 
@@ -46,7 +63,7 @@ test.describe("onboarding", () => {
     await db.$disconnect();
   });
 
-  test("user can complete onboarding and land on the feed", async ({ page }) => {
+  test("user can complete onboarding and land on the dashboard", async ({ page }) => {
     await page.goto("/onboarding");
 
     await page.fill('input[name="locations"]', "Tel Aviv, Ramat Gan");
@@ -57,6 +74,6 @@ test.describe("onboarding", () => {
     await page.click('button[type="submit"]');
 
     await expect(page).toHaveURL("/");
-    await expect(page.locator("h1")).toHaveText("New listings");
+    await expect(page.locator("h1")).toHaveText("לוח בקרה");
   });
 });
