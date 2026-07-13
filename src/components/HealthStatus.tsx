@@ -27,10 +27,30 @@ export function HealthStatus() {
   }, []);
 
   if (status.kind === "loading") return null;
-  if (status.kind === "error") return <p>Couldn't check scrape status — see server logs.</p>;
+
+  if (status.kind === "error") {
+    return (
+      <div className="health">
+        <span className="health__pill">
+          <span className="health__dot" data-state="error" />
+          Couldn&apos;t check scrape status — see server logs.
+        </span>
+      </div>
+    );
+  }
 
   const lastRun = status.lastRun;
-  if (!lastRun) return <p>No scrape has run yet.</p>;
+
+  if (!lastRun) {
+    return (
+      <div className="health">
+        <span className="health__pill">
+          <span className="health__dot" />
+          No scrape has run yet.
+        </span>
+      </div>
+    );
+  }
 
   const notes = [
     lastRun.skippedListings > 0 ? `${lastRun.skippedListings} skipped (bad data)` : null,
@@ -38,10 +58,13 @@ export function HealthStatus() {
   ].filter(Boolean);
 
   return (
-    <p>
-      Last scrape: {new Date(lastRun.startedAt).toLocaleString()} —{" "}
-      {lastRun.success ? `${lastRun.newListings} new listings` : `failed: ${lastRun.errorMessage ?? "unknown error"}`}
-      {notes.length > 0 && ` (${notes.join(", ")})`}
-    </p>
+    <div className="health">
+      <span className="health__pill">
+        <span className="health__dot" data-state={lastRun.success ? "ok" : "error"} />
+        Last scrape {new Date(lastRun.startedAt).toLocaleString()} —{" "}
+        {lastRun.success ? `${lastRun.newListings} new listings` : `failed: ${lastRun.errorMessage ?? "unknown error"}`}
+        {notes.length > 0 && ` (${notes.join(", ")})`}
+      </span>
+    </div>
   );
 }

@@ -38,15 +38,21 @@ export default function FeedPage() {
   return (
     <main>
       <h1>New listings</h1>
-      {listings.length === 0 && <p>No listings yet — check back after the next scrape.</p>}
-      {listings.map((listing) => (
-        <ListingCard
-          key={listing.id}
-          {...listing}
-          onFeedback={handleFeedback}
-          disabled={pendingIds.has(listing.id)}
-        />
-      ))}
+      <p className="page-subtitle">Fresh matches to review — like the ones worth a closer look.</p>
+      {listings.length === 0 ? (
+        <div className="empty">No listings yet — check back after the next scrape.</div>
+      ) : (
+        <div className="card-list">
+          {listings.map((listing) => (
+            <ListingCard
+              key={listing.id}
+              {...listing}
+              onFeedback={handleFeedback}
+              disabled={pendingIds.has(listing.id)}
+            />
+          ))}
+        </div>
+      )}
     </main>
   );
 }

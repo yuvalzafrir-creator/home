@@ -24,16 +24,28 @@ export function ListingCard({
   disabled,
 }: ListingCardProps) {
   return (
-    <article>
+    <article className="listing">
       <h3>{address}</h3>
-      <p>₪{price.toLocaleString()} · {rooms} rooms · {sizeSqm}m²</p>
+      <p className="listing__meta">
+        ₪{price.toLocaleString()} · {rooms} rooms · {sizeSqm}m²
+      </p>
       {matchScore !== null && (
-        <p>
-          Match: {matchScore}/100 — {matchReason}
+        <p className="listing__match">
+          <span className="listing__score">
+            {matchScore}
+            <small>/100</small>
+          </span>
+          {matchReason}
         </p>
       )}
-      <button onClick={() => onFeedback(id, "like")} disabled={disabled}>Like</button>
-      <button onClick={() => onFeedback(id, "dislike")} disabled={disabled}>Dislike</button>
+      <div className="listing__actions">
+        <button className="btn-like" onClick={() => onFeedback(id, "like")} disabled={disabled}>
+          Like
+        </button>
+        <button className="btn-dislike" onClick={() => onFeedback(id, "dislike")} disabled={disabled}>
+          Dislike
+        </button>
+      </div>
     </article>
   );
 }

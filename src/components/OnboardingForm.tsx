@@ -66,7 +66,9 @@ export function OnboardingForm() {
       <label>Example listings you've already seen (comma-separated URLs)<textarea name="exampleUrls" /></label>
 
       {error && <p role="alert">{error}</p>}
-      <button type="submit" disabled={submitting}>Save preferences</button>
+      <button type="submit" className="btn-primary" disabled={submitting}>
+        {submitting ? "Saving…" : "Save preferences"}
+      </button>
     </form>
   );
 }

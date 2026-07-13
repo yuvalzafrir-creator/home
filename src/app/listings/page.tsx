@@ -59,22 +59,33 @@ export default function ListingsHistoryPage() {
   return (
     <main>
       <h1>All listings</h1>
-      <label>
-        Filter:
-        <select value={filter} onChange={(e) => setFilter(e.target.value as FilterOption)}>
+      <p className="page-subtitle">Everything we&apos;ve found so far — filter to focus.</p>
+      <div className="control-row">
+        <label htmlFor="filter">Filter</label>
+        <select
+          id="filter"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value as FilterOption)}
+        >
           <option value="all">All</option>
           <option value="favorites">Favorites</option>
           <option value="unseen">Unseen</option>
         </select>
-      </label>
-      {listings.map((listing) => (
-        <ListingCard
-          key={listing.id}
-          {...listing}
-          onFeedback={handleFeedback}
-          disabled={pendingIds.has(listing.id)}
-        />
-      ))}
+      </div>
+      {listings.length === 0 ? (
+        <div className="empty">No listings match this filter yet.</div>
+      ) : (
+        <div className="card-list">
+          {listings.map((listing) => (
+            <ListingCard
+              key={listing.id}
+              {...listing}
+              onFeedback={handleFeedback}
+              disabled={pendingIds.has(listing.id)}
+            />
+          ))}
+        </div>
+      )}
     </main>
   );
 }

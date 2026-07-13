@@ -25,26 +25,32 @@ export default function ComparePage() {
   return (
     <main>
       <h1>Compare</h1>
-      <p>Select 2-4 favorites to compare:</p>
-      <ul>
-        {listings.map((l) => {
-          const atCap = selectedIds.length >= 4 && !selectedIds.includes(l.id);
-          return (
-            <li key={l.id}>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={selectedIds.includes(l.id)}
-                  onChange={() => toggle(l.id)}
-                  disabled={atCap}
-                />
-                {l.address}
-              </label>
-            </li>
-          );
-        })}
-      </ul>
-      {selectedIds.length >= 4 && <p>Max 4 selected — deselect one to choose another.</p>}
+      <p className="page-subtitle">Pick 2–4 favorites to see them side by side.</p>
+      {listings.length === 0 ? (
+        <div className="empty">No favorites yet — like a few listings first.</div>
+      ) : (
+        <ul className="compare-picker">
+          {listings.map((l) => {
+            const atCap = selectedIds.length >= 4 && !selectedIds.includes(l.id);
+            return (
+              <li key={l.id}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(l.id)}
+                    onChange={() => toggle(l.id)}
+                    disabled={atCap}
+                  />
+                  {l.address}
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {selectedIds.length >= 4 && (
+        <p className="page-subtitle">Max 4 selected — deselect one to choose another.</p>
+      )}
       {selected.length >= 2 && <CompareTable listings={selected} />}
     </main>
   );
