@@ -410,6 +410,15 @@ form [role="alert"] {
   font-size: 14px;
 }
 
+.form-saved {
+  color: var(--success);
+  background: var(--success-soft);
+  border: 1px solid color-mix(in srgb, var(--success) 30%, var(--border));
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+}
+
 /* ---------- Inline controls (filter selects) ---------- */
 .control-row {
   display: flex;
