@@ -27,7 +27,7 @@ export function ListingCard({
     <article className="listing">
       <h3>{address}</h3>
       <p className="listing__meta">
-        ₪{price.toLocaleString()} · {rooms} rooms · {sizeSqm}m²
+        ₪{price.toLocaleString()} · {rooms} חד&apos; · {sizeSqm} מ&quot;ר
       </p>
       {matchScore !== null && (
         <p className="listing__match">
@@ -40,10 +40,10 @@ export function ListingCard({
       )}
       <div className="listing__actions">
         <button className="btn-like" onClick={() => onFeedback(id, "like")} disabled={disabled}>
-          Like
+          שמור
         </button>
         <button className="btn-dislike" onClick={() => onFeedback(id, "dislike")} disabled={disabled}>
-          Dislike
+          לא מתאים
         </button>
       </div>
     </article>

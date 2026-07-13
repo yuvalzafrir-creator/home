@@ -24,10 +24,10 @@ export default function ComparePage() {
 
   return (
     <main>
-      <h1>Compare</h1>
-      <p className="page-subtitle">Pick 2–4 favorites to see them side by side.</p>
+      <h1>השוואה</h1>
+      <p className="page-subtitle">בחרו 2–4 מועדפים לתצוגה זו לצד זו.</p>
       {listings.length === 0 ? (
-        <div className="empty">No favorites yet — like a few listings first.</div>
+        <div className="empty">עדיין אין מועדפים — סמנו כמה מודעות קודם.</div>
       ) : (
         <ul className="compare-picker">
           {listings.map((l) => {
@@ -49,7 +49,7 @@ export default function ComparePage() {
         </ul>
       )}
       {selectedIds.length >= 4 && (
-        <p className="page-subtitle">Max 4 selected — deselect one to choose another.</p>
+        <p className="page-subtitle">נבחרו 4 (מקסימום) — הסירו סימון כדי לבחור אחר.</p>
       )}
       {selected.length >= 2 && <CompareTable listings={selected} />}
     </main>
