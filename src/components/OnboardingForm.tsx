@@ -32,7 +32,7 @@ export function OnboardingForm({ mode = "create", initial = null }: OnboardingFo
       openToRenting: form.get("openToRenting") === "on",
       openToFixerUpper: form.get("openToFixerUpper") === "on",
       renovationBudget: form.get("renovationBudget") ? Number(form.get("renovationBudget")) : undefined,
-      freeText: String(form.get("freeText") ?? ""),
+      freeText: form.get("freeText") ? String(form.get("freeText")) : undefined,
       exampleUrls: String(form.get("exampleUrls") ?? "").split(",").map((s) => s.trim()).filter(Boolean),
     };
 
