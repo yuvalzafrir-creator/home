@@ -4,10 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV = [
-  { href: "/", label: "Feed" },
-  { href: "/listings", label: "All listings" },
-  { href: "/compare", label: "Compare" },
-  { href: "/onboarding", label: "Preferences" },
+  { href: "/", label: "לוח בקרה" },
+  { href: "/listings", label: "מודעות" },
+  { href: "/compare", label: "השוואה" },
+  { href: "/profile", label: "פרופיל" },
 ];
 
 export function Header() {

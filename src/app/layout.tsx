@@ -16,8 +16,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "HomeScout — your home search assistant",
-  description: "Personalized apartment listings, scored and ready to review.",
+  title: "HomeScout — עוזר חיפוש הדירה שלך",
+  description: "מודעות דירות מותאמות אישית, מדורגות ומוכנות לעיון.",
 };
 
 export default function RootLayout({
@@ -26,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="he" dir="rtl">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <Header />
         <HealthStatus />

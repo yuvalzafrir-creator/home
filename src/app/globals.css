@@ -132,7 +132,7 @@ a {
 .site-nav {
   display: flex;
   gap: 4px;
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 .site-nav a {

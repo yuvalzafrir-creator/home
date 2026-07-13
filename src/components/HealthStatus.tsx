@@ -33,7 +33,7 @@ export function HealthStatus() {
       <div className="health">
         <span className="health__pill">
           <span className="health__dot" data-state="error" />
-          Couldn&apos;t check scrape status — see server logs.
+          לא ניתן לבדוק את סטטוס הסריקה — ראו יומני שרת.
         </span>
       </div>
     );
@@ -46,23 +46,23 @@ export function HealthStatus() {
       <div className="health">
         <span className="health__pill">
           <span className="health__dot" />
-          No scrape has run yet.
+          עדיין לא בוצעה סריקה.
         </span>
       </div>
     );
   }
 
   const notes = [
-    lastRun.skippedListings > 0 ? `${lastRun.skippedListings} skipped (bad data)` : null,
-    lastRun.failedScoring > 0 ? `${lastRun.failedScoring} unscored (Claude error)` : null,
+    lastRun.skippedListings > 0 ? `${lastRun.skippedListings} דולגו (נתונים חסרים)` : null,
+    lastRun.failedScoring > 0 ? `${lastRun.failedScoring} ללא דירוג (שגיאת Claude)` : null,
   ].filter(Boolean);
 
   return (
     <div className="health">
       <span className="health__pill">
         <span className="health__dot" data-state={lastRun.success ? "ok" : "error"} />
-        Last scrape {new Date(lastRun.startedAt).toLocaleString()} —{" "}
-        {lastRun.success ? `${lastRun.newListings} new listings` : `failed: ${lastRun.errorMessage ?? "unknown error"}`}
+        סריקה אחרונה {new Date(lastRun.startedAt).toLocaleString("he-IL")} —{" "}
+        {lastRun.success ? `${lastRun.newListings} מודעות חדשות` : `נכשלה: ${lastRun.errorMessage ?? "שגיאה לא ידועה"}`}
         {notes.length > 0 && ` (${notes.join(", ")})`}
       </span>
     </div>
