@@ -24,19 +24,19 @@ export async function POST(req: Request) {
   const fields = {
     locations: JSON.stringify(data.locations),
     budgetMax: data.budgetMax,
-    minRooms: data.minRooms,
-    minSizeSqm: data.minSizeSqm,
+    minRooms: data.minRooms ?? null,
+    minSizeSqm: data.minSizeSqm ?? null,
     mustHaveExtras: JSON.stringify(data.mustHaveExtras),
     goal: data.goal,
     openToRenting: data.openToRenting,
     openToFixerUpper: data.openToFixerUpper,
-    renovationBudget: data.renovationBudget,
-    freeText: data.freeText,
+    renovationBudget: data.renovationBudget ?? null,
+    freeText: data.freeText ?? null,
     exampleUrls: JSON.stringify(data.exampleUrls),
   };
 
   // Single-user tool: update the existing profile if present, else create.
-  const existing = await db.preferenceProfile.findFirst({ orderBy: { createdAt: "desc" } });
+  const existing = await getProfile();
   const profile = existing
     ? await db.preferenceProfile.update({ where: { id: existing.id }, data: fields })
     : await db.preferenceProfile.create({ data: fields });

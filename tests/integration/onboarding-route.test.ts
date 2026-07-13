@@ -118,4 +118,23 @@ describe("POST /api/onboarding", () => {
     const body = await res.json();
     expect(body.profile).toBeNull();
   });
+
+  it("clears optional fields omitted on a re-submit", async () => {
+    const withRenovation = new Request("http://localhost/api/onboarding", {
+      method: "POST",
+      body: JSON.stringify(validPayload({ renovationBudget: 200000, freeText: "near a park" })),
+    });
+    await POST(withRenovation as any);
+
+    const without = new Request("http://localhost/api/onboarding", {
+      method: "POST",
+      body: JSON.stringify(validPayload()),
+    });
+    await POST(without as any);
+
+    const res = await GET();
+    const body = await res.json();
+    expect(body.profile.renovationBudget).toBeNull();
+    expect(body.profile.freeText).toBeNull();
+  });
 });
