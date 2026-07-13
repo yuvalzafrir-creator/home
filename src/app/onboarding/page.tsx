@@ -1,13 +1,18 @@
+import { redirect } from "next/navigation";
 import { OnboardingForm } from "@/components/OnboardingForm";
+import { getProfile } from "@/lib/profile";
 
-export default function OnboardingPage() {
+export default async function OnboardingPage() {
+  const profile = await getProfile();
+  if (profile) redirect("/");
+
   return (
     <main>
-      <h1>Tell us what you&apos;re looking for</h1>
+      <h1>ספרו לנו מה אתם מחפשים</h1>
       <p className="page-subtitle">
-        We&apos;ll use this to score every new listing so the best matches rise to the top.
+        נשתמש בזה כדי לדרג כל מודעה חדשה כך שההתאמות הטובות ביותר יעלו למעלה.
       </p>
-      <OnboardingForm />
+      <OnboardingForm mode="create" />
     </main>
   );
 }
