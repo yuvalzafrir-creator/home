@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { OnboardingForm } from "@/components/OnboardingForm";
 import { getProfile } from "@/lib/profile";
 
+export const dynamic = "force-dynamic";
+
 export default async function ProfilePage() {
   const profile = await getProfile();
   if (!profile) redirect("/onboarding");
