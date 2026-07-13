@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { POST } from "@/app/api/onboarding/route";
+import { POST, GET } from "@/app/api/onboarding/route";
 import { db } from "@/lib/db";
 
 describe("POST /api/onboarding", () => {
@@ -69,5 +69,53 @@ describe("POST /api/onboarding", () => {
 
     expect(res.status).toBe(400);
     expect(body).toEqual({ error: "Invalid JSON body" });
+  });
+
+  const validPayload = (over: Record<string, unknown> = {}) => ({
+    locations: ["Tel Aviv"],
+    budgetMax: 3000000,
+    goal: "primary",
+    mustHaveExtras: [],
+    exampleUrls: [],
+    ...over,
+  });
+
+  it("updates the existing profile instead of creating a second one", async () => {
+    const first = new Request("http://localhost/api/onboarding", {
+      method: "POST",
+      body: JSON.stringify(validPayload({ budgetMax: 3000000 })),
+    });
+    await POST(first as any);
+
+    const second = new Request("http://localhost/api/onboarding", {
+      method: "POST",
+      body: JSON.stringify(validPayload({ budgetMax: 4200000 })),
+    });
+    const res = await POST(second as any);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.profile.budgetMax).toBe(4200000);
+    expect(await db.preferenceProfile.count()).toBe(1);
+  });
+
+  it("GET returns the stored profile with parsed array fields", async () => {
+    const req = new Request("http://localhost/api/onboarding", {
+      method: "POST",
+      body: JSON.stringify(validPayload({ locations: ["Tel Aviv", "Ramat Gan"] })),
+    });
+    await POST(req as any);
+
+    const res = await GET();
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.profile.locations).toEqual(["Tel Aviv", "Ramat Gan"]);
+  });
+
+  it("GET returns null when no profile exists", async () => {
+    const res = await GET();
+    const body = await res.json();
+    expect(body.profile).toBeNull();
   });
 });
