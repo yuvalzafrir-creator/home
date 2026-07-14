@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ListingCard } from "@/components/ListingCard";
 import { SourceLinks } from "@/components/SourceLinks";
+import { ListingsMap, type MapListing } from "@/components/ListingsMap";
 import type { Listing } from "@/types/listing";
 
 type FilterOption = "all" | "favorites" | "unseen";
@@ -11,6 +12,7 @@ export function ListingsClient() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [filter, setFilter] = useState<FilterOption>("all");
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+  const [view, setView] = useState<"list" | "map">("list");
 
   useEffect(() => {
     const query = filter === "all" ? "" : `?filter=${filter}`;
@@ -57,36 +59,50 @@ export function ListingsClient() {
     });
   }
 
+  const located: MapListing[] = listings
+    .filter((l) => l.lat !== null && l.lng !== null)
+    .map((l) => ({ id: l.id, address: l.address, price: l.price, lat: l.lat as number, lng: l.lng as number, matchScore: l.matchScore }));
+
   return (
     <main>
       <h1>מודעות</h1>
       <p className="page-subtitle">כל מה שנמצא עד כה — סננו כדי להתמקד.</p>
       <SourceLinks />
-      <div className="control-row">
-        <label htmlFor="filter">סינון</label>
-        <select
-          id="filter"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value as FilterOption)}
-        >
-          <option value="all">הכל</option>
-          <option value="favorites">מועדפים</option>
-          <option value="unseen">טרם נצפו</option>
-        </select>
+      <div className="view-toggle">
+        <button data-active={view === "list"} onClick={() => setView("list")}>רשימה</button>
+        <button data-active={view === "map"} onClick={() => setView("map")}>מפה</button>
       </div>
-      {listings.length === 0 ? (
-        <div className="empty">אין מודעות שתואמות לסינון עדיין.</div>
+      {view === "map" ? (
+        <ListingsMap listings={located} />
       ) : (
-        <div className="card-list">
-          {listings.map((listing) => (
-            <ListingCard
-              key={listing.id}
-              {...listing}
-              onFeedback={handleFeedback}
-              disabled={pendingIds.has(listing.id)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="control-row">
+            <label htmlFor="filter">סינון</label>
+            <select
+              id="filter"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value as FilterOption)}
+            >
+              <option value="all">הכל</option>
+              <option value="favorites">מועדפים</option>
+              <option value="unseen">טרם נצפו</option>
+            </select>
+          </div>
+          {listings.length === 0 ? (
+            <div className="empty">אין מודעות שתואמות לסינון עדיין.</div>
+          ) : (
+            <div className="card-list">
+              {listings.map((listing) => (
+                <ListingCard
+                  key={listing.id}
+                  {...listing}
+                  onFeedback={handleFeedback}
+                  disabled={pendingIds.has(listing.id)}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </main>
   );
