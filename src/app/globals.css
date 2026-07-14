@@ -706,3 +706,14 @@ article.listing .listing__source {
 .autofill-btn {
   align-self: flex-start;
 }
+
+.map-container {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  /* Own stacking context so Leaflet's high internal z-indexes stay below the
+     sticky header (z-index 20). */
+  position: relative;
+  z-index: 0;
+}
