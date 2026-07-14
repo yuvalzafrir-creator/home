@@ -44,4 +44,11 @@ describe("parseExtractedFields", () => {
   it("returns null for non-JSON", () => {
     expect(parseExtractedFields("sorry, I couldn't find anything")).toBeNull();
   });
+  it("rounds integer-typed fields but keeps fractional rooms", () => {
+    const fields = parseExtractedFields('{"price":2650000.4,"sizeSqm":78.6,"floor":2.9,"rooms":3.5}');
+    expect(fields!.price).toBe(2650000);
+    expect(fields!.sizeSqm).toBe(79);
+    expect(fields!.floor).toBe(3);
+    expect(fields!.rooms).toBe(3.5);
+  });
 });

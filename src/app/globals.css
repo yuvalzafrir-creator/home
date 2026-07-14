@@ -269,6 +269,7 @@ article.listing h3 {
 
 .listing__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 16px;
 }
@@ -702,6 +703,6 @@ article.listing .listing__source {
   font-size: 14px;
 }
 
-form button[type="button"] {
+.autofill-btn {
   align-self: flex-start;
 }

@@ -52,4 +52,9 @@ describe("POST /api/listings/extract", () => {
     const res = await POST(req({ url: "not a url" }));
     expect(res.status).toBe(400);
   });
+
+  it("400s on a non-http scheme", async () => {
+    const res = await POST(req({ url: "file:///etc/passwd" }));
+    expect(res.status).toBe(400);
+  });
 });

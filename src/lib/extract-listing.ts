@@ -38,14 +38,15 @@ export function parseExtractedFields(raw: string): ExtractedFields | null {
   if (typeof obj !== "object" || obj === null) return null;
   const o = obj as Record<string, unknown>;
   const num = (v: unknown) => (typeof v === "number" && !Number.isNaN(v) ? v : null);
+  const int = (v: unknown) => (typeof v === "number" && !Number.isNaN(v) ? Math.round(v) : null);
   const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
   const bool = (v: unknown) => v === true;
   return {
     address: str(o.address),
-    price: num(o.price),
+    price: int(o.price),
     rooms: num(o.rooms),
-    sizeSqm: num(o.sizeSqm),
-    floor: num(o.floor),
+    sizeSqm: int(o.sizeSqm),
+    floor: int(o.floor),
     hasParking: bool(o.hasParking),
     hasBalcony: bool(o.hasBalcony),
     hasMamad: bool(o.hasMamad),
@@ -69,6 +70,7 @@ export async function extractListingFromUrl(url: string): Promise<ExtractResult>
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
       },
+      signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) return { ok: false, reason: "fetch_failed" };
     html = await res.text();

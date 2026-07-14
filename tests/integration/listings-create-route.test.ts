@@ -47,4 +47,10 @@ describe("POST /api/listings", () => {
     const res = await POST(req({ url: "https://x.com/y", address: "", price: -1 }));
     expect(res.status).toBe(400);
   });
+
+  it("dedups a URL that differs only by a trailing slash", async () => {
+    await POST(req(base));
+    const res = await POST(req({ ...base, url: base.url + "/" }));
+    expect(res.status).toBe(409);
+  });
 });

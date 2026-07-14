@@ -30,10 +30,12 @@ export const listingNotesSchema = z.object({
 
 export type ListingNotesInput = z.infer<typeof listingNotesSchema>;
 
-export const extractUrlSchema = z.object({ url: z.string().url() });
+export const extractUrlSchema = z.object({
+  url: z.string().url().refine((u) => /^https?:\/\//i.test(u), "URL must be http(s)"),
+});
 
 export const addListingSchema = z.object({
-  url: z.string().url(),
+  url: z.string().url().refine((u) => /^https?:\/\//i.test(u), "URL must be http(s)"),
   address: z.string().min(1),
   price: z.number().int().positive(),
   rooms: z.number().positive(),

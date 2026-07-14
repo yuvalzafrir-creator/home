@@ -82,7 +82,7 @@ export function AddListingForm() {
           placeholder="https://www.yad2.co.il/item/..."
         />
       </label>
-      <button type="button" onClick={autoFill} disabled={filling || !url}>
+      <button type="button" className="autofill-btn" onClick={autoFill} disabled={filling || !url}>
         {filling ? "ממלא…" : "מלא אוטומטית"}
       </button>
       {notice && <p className="form-notice">{notice}</p>}

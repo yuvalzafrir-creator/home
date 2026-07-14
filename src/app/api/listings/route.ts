@@ -35,6 +35,18 @@ function deriveSourceSite(url: string): string {
   return host.replace(/^www\./, "");
 }
 
+function normalizeUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    u.hash = "";
+    let s = u.toString();
+    if (s.endsWith("/")) s = s.slice(0, -1);
+    return s;
+  } catch {
+    return url.trim();
+  }
+}
+
 export async function POST(req: Request) {
   let body: unknown;
   try {
@@ -49,7 +61,8 @@ export async function POST(req: Request) {
   }
   const data = parsed.data;
 
-  const duplicate = await db.listing.findUnique({ where: { sourceUrl: data.url } });
+  const sourceUrl = normalizeUrl(data.url);
+  const duplicate = await db.listing.findUnique({ where: { sourceUrl } });
   if (duplicate) {
     return NextResponse.json({ error: "Listing already exists" }, { status: 409 });
   }
@@ -83,24 +96,30 @@ export async function POST(req: Request) {
     console.warn("POST /api/listings: scoring failed, saving unscored:", err);
   }
 
-  const listing = await db.listing.create({
-    data: {
-      sourceSite: deriveSourceSite(data.url),
-      sourceUrl: data.url,
-      address: data.address,
-      price: data.price,
-      rooms: data.rooms,
-      sizeSqm: data.sizeSqm,
-      floor: data.floor ?? null,
-      hasParking: data.hasParking,
-      hasBalcony: data.hasBalcony,
-      hasMamad: data.hasMamad,
-      hasElevator: data.hasElevator,
-      description: data.description ?? null,
-      matchScore,
-      matchReason,
-    },
-  });
-
-  return NextResponse.json({ listing }, { status: 201 });
+  try {
+    const listing = await db.listing.create({
+      data: {
+        sourceSite: deriveSourceSite(sourceUrl),
+        sourceUrl,
+        address: data.address,
+        price: data.price,
+        rooms: data.rooms,
+        sizeSqm: data.sizeSqm,
+        floor: data.floor ?? null,
+        hasParking: data.hasParking,
+        hasBalcony: data.hasBalcony,
+        hasMamad: data.hasMamad,
+        hasElevator: data.hasElevator,
+        description: data.description ?? null,
+        matchScore,
+        matchReason,
+      },
+    });
+    return NextResponse.json({ listing }, { status: 201 });
+  } catch (err) {
+    if (err && typeof err === "object" && (err as { code?: string }).code === "P2002") {
+      return NextResponse.json({ error: "Listing already exists" }, { status: 409 });
+    }
+    throw err;
+  }
 }
