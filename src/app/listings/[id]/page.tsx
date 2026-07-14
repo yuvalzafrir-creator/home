@@ -23,7 +23,7 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
 
   return (
     <main>
-      <Link href="/listings" className="back-link">← חזרה למודעות</Link>
+      <Link href="/listings" className="back-link">→ חזרה למודעות</Link>
 
       <div className="detail-head">
         <div>

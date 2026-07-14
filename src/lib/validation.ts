@@ -23,3 +23,9 @@ export const feedbackSchema = z.object({
 });
 
 export type FeedbackInput = z.infer<typeof feedbackSchema>;
+
+export const listingNotesSchema = z.object({
+  notes: z.string().max(5000),
+});
+
+export type ListingNotesInput = z.infer<typeof listingNotesSchema>;

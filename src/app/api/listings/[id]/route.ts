@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { db } from "@/lib/db";
-
-const notesSchema = z.object({ notes: z.string() });
+import { listingNotesSchema } from "@/lib/validation";
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   let body: unknown;
@@ -12,7 +10,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const parsed = notesSchema.safeParse(body);
+  const parsed = listingNotesSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }

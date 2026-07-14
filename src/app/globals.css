@@ -648,6 +648,11 @@ table td:first-child {
   margin-top: 12px;
 }
 
+.notes-error {
+  color: var(--danger);
+  font-size: 14px;
+}
+
 .detail-source {
   display: inline-block;
   color: var(--accent);
