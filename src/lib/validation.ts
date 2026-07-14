@@ -29,3 +29,5 @@ export const listingNotesSchema = z.object({
 });
 
 export type ListingNotesInput = z.infer<typeof listingNotesSchema>;
+
+export const extractUrlSchema = z.object({ url: z.string().url() });
