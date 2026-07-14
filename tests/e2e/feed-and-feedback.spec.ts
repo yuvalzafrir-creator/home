@@ -34,6 +34,7 @@ test.describe("feed and feedback", () => {
   // corrupted by this test once ANTHROPIC_API_KEY is populated for real.
   let profileBeforeId: string | null;
   let profileBeforeSummary: string | null;
+  let createdProfileId: string | null = null;
 
   test.beforeEach(async () => {
     // Real scraping is currently blocked by Yad2's bot detection (Task 12),
@@ -58,9 +59,32 @@ test.describe("feed and feedback", () => {
     const profileBefore = await db.preferenceProfile.findFirst({ orderBy: { createdAt: "desc" } });
     profileBeforeId = profileBefore?.id ?? null;
     profileBeforeSummary = profileBefore?.learnedSummary ?? null;
+
+    // /listings is gated on a profile existing (Phase 2). Ensure one is present;
+    // remember if we created it so afterEach can remove exactly what we added.
+    const anyProfile = await db.preferenceProfile.findFirst();
+    if (!anyProfile) {
+      const created = await db.preferenceProfile.create({
+        data: {
+          locations: JSON.stringify(["Tel Aviv"]),
+          budgetMax: 3000000,
+          mustHaveExtras: JSON.stringify([]),
+          goal: "primary",
+          exampleUrls: JSON.stringify([]),
+        },
+      });
+      createdProfileId = created.id;
+    } else {
+      createdProfileId = null;
+    }
   });
 
   test.afterEach(async () => {
+    if (createdProfileId) {
+      await db.preferenceProfile.delete({ where: { id: createdProfileId } });
+      createdProfileId = null;
+    }
+
     // Clean up feedback first (Feedback.listingId has a FK to Listing) then
     // the listing itself, so repeated runs of this suite don't leave rows
     // behind or trip the every-3rd-feedback learned-summary refresh in

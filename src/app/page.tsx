@@ -43,7 +43,7 @@ export default async function DashboardPage() {
           <div className="card-list">
             {favorites.map((l) => (
               <article className="listing" key={l.id}>
-                <h3>{l.address}</h3>
+                <h3><Link href={`/listings/${l.id}`} className="listing__title">{l.address}</Link></h3>
                 <p className="listing__meta">
                   ₪{l.price.toLocaleString()} · {l.rooms} חד&apos; · {l.sizeSqm} מ&quot;ר
                   {l.matchScore !== null ? ` · ${l.matchScore}/100` : ""}

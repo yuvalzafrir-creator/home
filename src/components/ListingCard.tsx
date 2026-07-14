@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 interface ListingCardProps {
   id: string;
   address: string;
@@ -25,7 +27,7 @@ export function ListingCard({
 }: ListingCardProps) {
   return (
     <article className="listing">
-      <h3>{address}</h3>
+      <h3><Link href={`/listings/${id}`} className="listing__title">{address}</Link></h3>
       <p className="listing__meta">
         ₪{price.toLocaleString()} · {rooms} חד&apos; · {sizeSqm} מ&quot;ר
       </p>
