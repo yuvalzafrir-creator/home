@@ -48,6 +48,9 @@ export default async function DashboardPage() {
                   ₪{l.price.toLocaleString()} · {l.rooms} חד&apos; · {l.sizeSqm} מ&quot;ר
                   {l.matchScore !== null ? ` · ${l.matchScore}/100` : ""}
                 </p>
+                <a href={l.sourceUrl} target="_blank" rel="noopener noreferrer" className="listing__source">
+                  למודעה המקורית ↗
+                </a>
               </article>
             ))}
           </div>

@@ -10,6 +10,7 @@ interface ListingCardProps {
   sizeSqm: number;
   matchScore: number | null;
   matchReason: string | null;
+  sourceUrl: string;
   onFeedback: (id: string, reaction: "like" | "dislike") => void;
   disabled: boolean;
 }
@@ -22,6 +23,7 @@ export function ListingCard({
   sizeSqm,
   matchScore,
   matchReason,
+  sourceUrl,
   onFeedback,
   disabled,
 }: ListingCardProps) {
@@ -47,6 +49,15 @@ export function ListingCard({
         <button className="btn-dislike" onClick={() => onFeedback(id, "dislike")} disabled={disabled}>
           לא מתאים
         </button>
+        <a
+          href={sourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="listing__source"
+          onClick={(e) => e.stopPropagation()}
+        >
+          למודעה המקורית ↗
+        </a>
       </div>
     </article>
   );
