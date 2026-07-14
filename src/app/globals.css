@@ -659,3 +659,7 @@ table td:first-child {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+.listing__title:hover {
+  color: var(--accent);
+}
