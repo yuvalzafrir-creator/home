@@ -4,11 +4,11 @@ type CompareListing = Pick<Listing, "id" | "address" | "price" | "rooms" | "size
 
 export function CompareTable({ listings }: { listings: CompareListing[] }) {
   const rows: { label: string; get: (l: CompareListing) => string | number }[] = [
-    { label: "Address", get: (l) => l.address },
-    { label: "Price", get: (l) => `₪${l.price.toLocaleString()}` },
-    { label: "Rooms", get: (l) => l.rooms },
-    { label: "Size (m²)", get: (l) => l.sizeSqm },
-    { label: "Match score", get: (l) => l.matchScore ?? "—" },
+    { label: "כתובת", get: (l) => l.address },
+    { label: "מחיר", get: (l) => `₪${l.price.toLocaleString()}` },
+    { label: "חדרים", get: (l) => l.rooms },
+    { label: 'שטח (מ"ר)', get: (l) => l.sizeSqm },
+    { label: "ציון התאמה", get: (l) => l.matchScore ?? "—" },
   ];
 
   return (

@@ -58,23 +58,34 @@ export default function ListingsHistoryPage() {
 
   return (
     <main>
-      <h1>All listings</h1>
-      <label>
-        Filter:
-        <select value={filter} onChange={(e) => setFilter(e.target.value as FilterOption)}>
-          <option value="all">All</option>
-          <option value="favorites">Favorites</option>
-          <option value="unseen">Unseen</option>
+      <h1>מודעות</h1>
+      <p className="page-subtitle">כל מה שנמצא עד כה — סננו כדי להתמקד.</p>
+      <div className="control-row">
+        <label htmlFor="filter">סינון</label>
+        <select
+          id="filter"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value as FilterOption)}
+        >
+          <option value="all">הכל</option>
+          <option value="favorites">מועדפים</option>
+          <option value="unseen">טרם נצפו</option>
         </select>
-      </label>
-      {listings.map((listing) => (
-        <ListingCard
-          key={listing.id}
-          {...listing}
-          onFeedback={handleFeedback}
-          disabled={pendingIds.has(listing.id)}
-        />
-      ))}
+      </div>
+      {listings.length === 0 ? (
+        <div className="empty">אין מודעות שתואמות לסינון עדיין.</div>
+      ) : (
+        <div className="card-list">
+          {listings.map((listing) => (
+            <ListingCard
+              key={listing.id}
+              {...listing}
+              onFeedback={handleFeedback}
+              disabled={pendingIds.has(listing.id)}
+            />
+          ))}
+        </div>
+      )}
     </main>
   );
 }

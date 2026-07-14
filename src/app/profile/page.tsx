@@ -4,17 +4,17 @@ import { getProfile } from "@/lib/profile";
 
 export const dynamic = "force-dynamic";
 
-export default async function OnboardingPage() {
+export default async function ProfilePage() {
   const profile = await getProfile();
-  if (profile) redirect("/");
+  if (!profile) redirect("/onboarding");
 
   return (
     <main>
-      <h1>ספרו לנו מה אתם מחפשים</h1>
+      <h1>הפרופיל שלי</h1>
       <p className="page-subtitle">
-        נשתמש בזה כדי לדרג כל מודעה חדשה כך שההתאמות הטובות ביותר יעלו למעלה.
+        עדכנו את ההעדפות בכל עת — הדירוג של מודעות חדשות יתעדכן בהתאם.
       </p>
-      <OnboardingForm mode="create" />
+      <OnboardingForm mode="edit" initial={profile} />
     </main>
   );
 }

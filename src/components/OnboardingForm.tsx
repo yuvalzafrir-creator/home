@@ -2,16 +2,24 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import type { ProfileData } from "@/lib/profile";
 
-export function OnboardingForm() {
+interface OnboardingFormProps {
+  mode?: "create" | "edit";
+  initial?: ProfileData | null;
+}
+
+export function OnboardingForm({ mode = "create", initial = null }: OnboardingFormProps) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+    setSaved(false);
 
     const form = new FormData(e.currentTarget);
     const payload = {
@@ -24,7 +32,7 @@ export function OnboardingForm() {
       openToRenting: form.get("openToRenting") === "on",
       openToFixerUpper: form.get("openToFixerUpper") === "on",
       renovationBudget: form.get("renovationBudget") ? Number(form.get("renovationBudget")) : undefined,
-      freeText: String(form.get("freeText") ?? ""),
+      freeText: form.get("freeText") ? String(form.get("freeText")) : undefined,
       exampleUrls: String(form.get("exampleUrls") ?? "").split(",").map((s) => s.trim()).filter(Boolean),
     };
 
@@ -37,36 +45,46 @@ export function OnboardingForm() {
     setSubmitting(false);
 
     if (!res.ok) {
-      setError("Please check the form — something was missing or invalid.");
+      setError("יש לבדוק את הטופס — משהו חסר או לא תקין.");
       return;
     }
 
-    router.push("/");
+    if (mode === "edit") {
+      setSaved(true);
+      router.refresh();
+    } else {
+      router.push("/");
+    }
   }
+
+  const csv = (a: string[] | undefined) => (a ?? []).join(", ");
 
   return (
     <form onSubmit={handleSubmit}>
-      <label>Locations (comma-separated)<input name="locations" required /></label>
-      <label>Max budget (₪)<input name="budgetMax" type="number" required /></label>
-      <label>Min rooms<input name="minRooms" type="number" step="0.5" /></label>
-      <label>Min size (m²)<input name="minSizeSqm" type="number" /></label>
-      <label>Must-have extras (comma-separated, e.g. parking, mamad, balcony)<input name="mustHaveExtras" /></label>
+      <label>אזורים (מופרדים בפסיקים)<input name="locations" required defaultValue={csv(initial?.locations)} /></label>
+      <label>תקציב מקסימלי (₪)<input name="budgetMax" type="number" required defaultValue={initial?.budgetMax ?? ""} /></label>
+      <label>מינימום חדרים<input name="minRooms" type="number" step="0.5" defaultValue={initial?.minRooms ?? ""} /></label>
+      <label>מינימום שטח (מ&quot;ר)<input name="minSizeSqm" type="number" defaultValue={initial?.minSizeSqm ?? ""} /></label>
+      <label>דרישות חובה (מופרדות בפסיקים, למשל חניה, ממ&quot;ד, מרפסת)<input name="mustHaveExtras" defaultValue={csv(initial?.mustHaveExtras)} /></label>
       <label>
-        Goal
-        <select name="goal" required defaultValue="">
-          <option value="" disabled>Select...</option>
-          <option value="primary">Primary residence</option>
-          <option value="investment">Investment</option>
+        מטרה
+        <select name="goal" required defaultValue={initial?.goal ?? ""}>
+          <option value="" disabled>בחר/י...</option>
+          <option value="primary">מגורים</option>
+          <option value="investment">השקעה</option>
         </select>
       </label>
-      <label><input name="openToRenting" type="checkbox" /> Open to renting first</label>
-      <label><input name="openToFixerUpper" type="checkbox" /> Open to a fixer-upper</label>
-      <label>Renovation budget (₪, if applicable)<input name="renovationBudget" type="number" /></label>
-      <label>Anything else? (free text)<textarea name="freeText" /></label>
-      <label>Example listings you've already seen (comma-separated URLs)<textarea name="exampleUrls" /></label>
+      <label><input name="openToRenting" type="checkbox" defaultChecked={initial?.openToRenting ?? false} /> פתוח/ה לשכירות בשלב ראשון</label>
+      <label><input name="openToFixerUpper" type="checkbox" defaultChecked={initial?.openToFixerUpper ?? false} /> פתוח/ה לדירה לשיפוץ</label>
+      <label>תקציב שיפוץ (₪, אם רלוונטי)<input name="renovationBudget" type="number" defaultValue={initial?.renovationBudget ?? ""} /></label>
+      <label>משהו נוסף? (טקסט חופשי)<textarea name="freeText" defaultValue={initial?.freeText ?? ""} /></label>
+      <label>מודעות לדוגמה שכבר ראית (כתובות מופרדות בפסיקים)<textarea name="exampleUrls" defaultValue={csv(initial?.exampleUrls)} /></label>
 
       {error && <p role="alert">{error}</p>}
-      <button type="submit" disabled={submitting}>Save preferences</button>
+      {saved && <p className="form-saved">ההעדפות נשמרו.</p>}
+      <button type="submit" className="btn-primary" disabled={submitting}>
+        {submitting ? "שומר…" : mode === "edit" ? "עדכון העדפות" : "שמירת העדפות"}
+      </button>
     </form>
   );
 }

@@ -24,27 +24,33 @@ export default function ComparePage() {
 
   return (
     <main>
-      <h1>Compare</h1>
-      <p>Select 2-4 favorites to compare:</p>
-      <ul>
-        {listings.map((l) => {
-          const atCap = selectedIds.length >= 4 && !selectedIds.includes(l.id);
-          return (
-            <li key={l.id}>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={selectedIds.includes(l.id)}
-                  onChange={() => toggle(l.id)}
-                  disabled={atCap}
-                />
-                {l.address}
-              </label>
-            </li>
-          );
-        })}
-      </ul>
-      {selectedIds.length >= 4 && <p>Max 4 selected — deselect one to choose another.</p>}
+      <h1>השוואה</h1>
+      <p className="page-subtitle">בחרו 2–4 מועדפים לתצוגה זו לצד זו.</p>
+      {listings.length === 0 ? (
+        <div className="empty">עדיין אין מועדפים — סמנו כמה מודעות קודם.</div>
+      ) : (
+        <ul className="compare-picker">
+          {listings.map((l) => {
+            const atCap = selectedIds.length >= 4 && !selectedIds.includes(l.id);
+            return (
+              <li key={l.id}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(l.id)}
+                    onChange={() => toggle(l.id)}
+                    disabled={atCap}
+                  />
+                  {l.address}
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {selectedIds.length >= 4 && (
+        <p className="page-subtitle">נבחרו 4 (מקסימום) — הסירו סימון כדי לבחור אחר.</p>
+      )}
       {selected.length >= 2 && <CompareTable listings={selected} />}
     </main>
   );
