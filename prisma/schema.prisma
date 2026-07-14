@@ -23,6 +23,8 @@ model Listing {
   renovated    Boolean    @default(false)
   description  String?
   neighborhood String?
+  lat          Float?
+  lng          Float?
   notes        String?
   photoUrl     String?
   status       String     @default("active")
