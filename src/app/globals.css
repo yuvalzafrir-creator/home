@@ -679,3 +679,20 @@ table td:first-child {
 article.listing .listing__source {
   margin-top: 10px;
 }
+
+.source-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+  font-size: 13px;
+}
+
+.source-links__label {
+  color: var(--text-muted);
+}
+
+.source-links a {
+  color: var(--accent);
+}
