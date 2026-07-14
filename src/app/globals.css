@@ -696,3 +696,12 @@ article.listing .listing__source {
 .source-links a {
   color: var(--accent);
 }
+
+.form-notice {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+form button[type="button"] {
+  align-self: flex-start;
+}

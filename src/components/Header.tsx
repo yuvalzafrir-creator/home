@@ -8,6 +8,7 @@ const NAV = [
   { href: "/listings", label: "מודעות" },
   { href: "/compare", label: "השוואה" },
   { href: "/profile", label: "פרופיל" },
+  { href: "/add", label: "הוספה" },
 ];
 
 export function Header() {
