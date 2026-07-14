@@ -8,27 +8,29 @@ datasource db {
 }
 
 model Listing {
-  id          String     @id @default(cuid())
-  sourceSite  String
-  sourceUrl   String     @unique
-  address     String
-  price       Int
-  rooms       Float
-  sizeSqm     Int
-  floor       Int?
-  hasParking  Boolean    @default(false)
-  hasBalcony  Boolean    @default(false)
-  hasMamad    Boolean    @default(false)
-  hasElevator Boolean    @default(false)
-  renovated   Boolean    @default(false)
-  description String?
-  photoUrl    String?
-  status      String     @default("active")
-  firstSeenAt DateTime   @default(now())
-  lastSeenAt  DateTime   @default(now())
-  matchScore  Int?
-  matchReason String?
-  feedback    Feedback[]
+  id           String     @id @default(cuid())
+  sourceSite   String
+  sourceUrl    String     @unique
+  address      String
+  price        Int
+  rooms        Float
+  sizeSqm      Int
+  floor        Int?
+  hasParking   Boolean    @default(false)
+  hasBalcony   Boolean    @default(false)
+  hasMamad     Boolean    @default(false)
+  hasElevator  Boolean    @default(false)
+  renovated    Boolean    @default(false)
+  description  String?
+  neighborhood String?
+  notes        String?
+  photoUrl     String?
+  status       String     @default("active")
+  firstSeenAt  DateTime   @default(now())
+  lastSeenAt   DateTime   @default(now())
+  matchScore   Int?
+  matchReason  String?
+  feedback     Feedback[]
 }
 
 model PreferenceProfile {
