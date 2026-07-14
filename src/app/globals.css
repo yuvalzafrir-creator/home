@@ -269,6 +269,7 @@ article.listing h3 {
 
 .listing__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 16px;
 }
@@ -667,4 +668,41 @@ table td:first-child {
 
 .listing__title:hover {
   color: var(--accent);
+}
+
+.listing__source {
+  display: inline-block;
+  margin-inline-start: auto;
+  color: var(--accent);
+  font-size: 13px;
+}
+
+article.listing .listing__source {
+  margin-top: 10px;
+}
+
+.source-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+  font-size: 13px;
+}
+
+.source-links__label {
+  color: var(--text-muted);
+}
+
+.source-links a {
+  color: var(--accent);
+}
+
+.form-notice {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.autofill-btn {
+  align-self: flex-start;
 }

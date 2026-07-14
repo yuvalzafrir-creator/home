@@ -6,4 +6,6 @@ export interface Listing {
   sizeSqm: number;
   matchScore: number | null;
   matchReason: string | null;
+  sourceUrl: string;
+  sourceSite: string;
 }

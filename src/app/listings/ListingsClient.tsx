@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ListingCard } from "@/components/ListingCard";
+import { SourceLinks } from "@/components/SourceLinks";
 import type { Listing } from "@/types/listing";
 
 type FilterOption = "all" | "favorites" | "unseen";
@@ -60,6 +61,7 @@ export function ListingsClient() {
     <main>
       <h1>מודעות</h1>
       <p className="page-subtitle">כל מה שנמצא עד כה — סננו כדי להתמקד.</p>
+      <SourceLinks />
       <div className="control-row">
         <label htmlFor="filter">סינון</label>
         <select

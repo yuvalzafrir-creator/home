@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { parseListingsFromHtml, type ParsedListing } from "@/scraper/yad2-parser";
 import { filterNewListings } from "@/scraper/dedup";
 import { scoreListing } from "@/lib/scoring";
+import { looksLikeBotChallenge } from "@/lib/bot-challenge";
 
 function isValidListing(listing: ParsedListing): boolean {
   return (
@@ -11,14 +12,6 @@ function isValidListing(listing: ParsedListing): boolean {
     !Number.isNaN(listing.price) &&
     !Number.isNaN(listing.rooms) &&
     !Number.isNaN(listing.sizeSqm)
-  );
-}
-
-function looksLikeBotChallenge(html: string): boolean {
-  return (
-    html.includes("Radware Page") ||
-    html.includes("verify-message") ||
-    /Incident ID/i.test(html)
   );
 }
 

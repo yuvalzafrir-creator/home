@@ -29,3 +29,23 @@ export const listingNotesSchema = z.object({
 });
 
 export type ListingNotesInput = z.infer<typeof listingNotesSchema>;
+
+export const extractUrlSchema = z.object({
+  url: z.string().url().refine((u) => /^https?:\/\//i.test(u), "URL must be http(s)"),
+});
+
+export const addListingSchema = z.object({
+  url: z.string().url().refine((u) => /^https?:\/\//i.test(u), "URL must be http(s)"),
+  address: z.string().min(1),
+  price: z.number().int().positive(),
+  rooms: z.number().positive(),
+  sizeSqm: z.number().int().positive(),
+  floor: z.number().int().nullable().optional(),
+  hasParking: z.boolean().default(false),
+  hasBalcony: z.boolean().default(false),
+  hasMamad: z.boolean().default(false),
+  hasElevator: z.boolean().default(false),
+  description: z.string().nullable().optional(),
+});
+
+export type AddListingInput = z.infer<typeof addListingSchema>;
