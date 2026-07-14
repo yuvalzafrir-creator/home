@@ -9,7 +9,8 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "scrape": "tsx src/scraper/run.ts"
+    "scrape": "tsx src/scraper/run.ts",
+    "geocode": "tsx src/scraper/geocode-backfill.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",

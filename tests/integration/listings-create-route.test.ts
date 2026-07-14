@@ -4,6 +4,10 @@ vi.mock("@/lib/scoring", () => ({
   scoreListing: vi.fn(async () => ({ score: 77, reason: "בדיקה" })),
 }));
 
+vi.mock("@/lib/geocode", () => ({
+  geocodeAddress: vi.fn(async () => ({ lat: 32.08, lng: 34.78 })),
+}));
+
 import { POST } from "@/app/api/listings/route";
 import { db } from "@/lib/db";
 
@@ -35,6 +39,8 @@ describe("POST /api/listings", () => {
     expect(body.listing.sourceSite).toBe("yad2");
     expect(body.listing.matchScore).toBe(77);
     expect(body.listing.hasParking).toBe(true);
+    expect(body.listing.lat).toBe(32.08);
+    expect(body.listing.lng).toBe(34.78);
   });
 
   it("rejects a duplicate sourceUrl with 409", async () => {

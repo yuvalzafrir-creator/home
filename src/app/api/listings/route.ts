@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { addListingSchema } from "@/lib/validation";
 import { scoreListing } from "@/lib/scoring";
+import { geocodeAddress } from "@/lib/geocode";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -96,6 +97,9 @@ export async function POST(req: Request) {
     console.warn("POST /api/listings: scoring failed, saving unscored:", err);
   }
 
+  // Best-effort geocode for the map — a miss/failure leaves lat/lng null.
+  const geo = await geocodeAddress(data.address);
+
   try {
     const listing = await db.listing.create({
       data: {
@@ -113,6 +117,8 @@ export async function POST(req: Request) {
         description: data.description ?? null,
         matchScore,
         matchReason,
+        lat: geo?.lat ?? null,
+        lng: geo?.lng ?? null,
       },
     });
     return NextResponse.json({ listing }, { status: 201 });
