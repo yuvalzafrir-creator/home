@@ -1,0 +1,85 @@
+import { test, expect } from "@playwright/test";
+import { PrismaClient } from "@prisma/client";
+import { config } from "dotenv";
+import path from "node:path";
+
+// See tests/e2e/onboarding.spec.ts for why .env.local is loaded explicitly and
+// why PrismaClient is instantiated directly rather than importing "@/lib/db".
+config({ path: path.resolve(__dirname, "../../.env.local"), override: true });
+
+if (!process.env.DATABASE_URL?.includes("dev.db")) {
+  throw new Error(
+    `tests/e2e/listing-detail.spec.ts: DATABASE_URL does not point at dev.db (got: ${process.env.DATABASE_URL}). ` +
+      "Refusing to run against an unexpected database."
+  );
+}
+
+const db = new PrismaClient();
+
+test.describe("listing detail + notes", () => {
+  let listingId: string;
+  let createdProfileId: string | null = null;
+
+  test.beforeEach(async () => {
+    const unique = Date.now();
+    const listing = await db.listing.create({
+      data: {
+        sourceSite: "yad2",
+        sourceUrl: `https://yad2.co.il/item/detail-${unique}`,
+        address: `Detail Test St ${unique}`,
+        price: 2600000,
+        rooms: 3,
+        sizeSqm: 78,
+        floor: 2,
+        hasMamad: true,
+        matchScore: 88,
+        matchReason: "Great fit for your criteria",
+      },
+    });
+    listingId = listing.id;
+
+    // /listings/[id] is gated on a profile existing. Ensure one is present.
+    const anyProfile = await db.preferenceProfile.findFirst();
+    if (!anyProfile) {
+      const created = await db.preferenceProfile.create({
+        data: {
+          locations: JSON.stringify(["Tel Aviv"]),
+          budgetMax: 3000000,
+          mustHaveExtras: JSON.stringify([]),
+          goal: "primary",
+          exampleUrls: JSON.stringify([]),
+        },
+      });
+      createdProfileId = created.id;
+    } else {
+      createdProfileId = null;
+    }
+  });
+
+  test.afterEach(async () => {
+    await db.listing.delete({ where: { id: listingId } });
+    if (createdProfileId) {
+      await db.preferenceProfile.delete({ where: { id: createdProfileId } });
+      createdProfileId = null;
+    }
+  });
+
+  test.afterAll(async () => {
+    await db.$disconnect();
+  });
+
+  test("shows facts and persists a note across reloads", async ({ page }) => {
+    await page.goto(`/listings/${listingId}`);
+
+    await expect(page.locator("h1")).toContainText("Detail Test St");
+    await expect(page.getByText('78 מ"ר')).toBeVisible();
+
+    const note = `visit Sunday ${Date.now()}`;
+    await page.fill("textarea", note);
+    await page.getByRole("button", { name: "שמירת הערות", exact: true }).click();
+    await expect(page.getByText("ההערות נשמרו.")).toBeVisible();
+
+    await page.reload();
+    await expect(page.locator("textarea")).toHaveValue(note);
+  });
+});
