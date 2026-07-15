@@ -7,11 +7,15 @@ import type { Listing } from "@/types/listing";
 export function CompareClient() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/listings?filter=favorites")
       .then((res) => res.json())
-      .then((data) => setListings(data.listings));
+      .then((data) => {
+        setListings(data.listings);
+        setLoading(false);
+      });
   }, []);
 
   function toggle(id: string) {
@@ -26,7 +30,13 @@ export function CompareClient() {
     <main>
       <h1>השוואה</h1>
       <p className="page-subtitle">בחרו 2–4 מועדפים לתצוגה זו לצד זו.</p>
-      {listings.length === 0 ? (
+      {loading ? (
+        <div className="skeleton-list">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="skeleton-card" style={{ height: 46 }} />
+          ))}
+        </div>
+      ) : listings.length === 0 ? (
         <div className="empty">עדיין אין מועדפים — סמנו כמה מודעות קודם.</div>
       ) : (
         <ul className="compare-picker">

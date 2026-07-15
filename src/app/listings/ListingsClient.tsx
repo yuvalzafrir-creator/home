@@ -13,12 +13,17 @@ export function ListingsClient() {
   const [filter, setFilter] = useState<FilterOption>("all");
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [view, setView] = useState<"list" | "map">("list");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     const query = filter === "all" ? "" : `?filter=${filter}`;
     fetch(`/api/listings${query}`)
       .then((res) => res.json())
-      .then((data) => setListings(data.listings));
+      .then((data) => {
+        setListings(data.listings);
+        setLoading(false);
+      });
   }, [filter]);
 
   async function handleFeedback(listingId: string, reaction: "like" | "dislike") {
@@ -92,7 +97,13 @@ export function ListingsClient() {
               <option value="unseen">טרם נצפו</option>
             </select>
           </div>
-          {listings.length === 0 ? (
+          {loading ? (
+            <div className="skeleton-list">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="skeleton-card" />
+              ))}
+            </div>
+          ) : listings.length === 0 ? (
             <div className="empty">אין מודעות שתואמות לסינון עדיין.</div>
           ) : (
             <div className="card-list">
