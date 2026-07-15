@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getProfile } from "@/lib/profile";
 import { ListingNotes } from "@/components/ListingNotes";
+import { ListingsMap } from "@/components/ListingsMap";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,15 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
           <span key={a.label} className="amenity-chip" data-off={!a.on}>{a.label}</span>
         ))}
       </div>
+
+      {listing.lat !== null && listing.lng !== null && (
+        <div style={{ marginBottom: 28 }}>
+          <ListingsMap
+            height={220}
+            listings={[{ id: listing.id, address: listing.address, price: listing.price, lat: listing.lat, lng: listing.lng, matchScore: listing.matchScore }]}
+          />
+        </div>
+      )}
 
       {listing.matchReason && (
         <section className="detail-section">

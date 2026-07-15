@@ -8,4 +8,6 @@ export interface Listing {
   matchReason: string | null;
   sourceUrl: string;
   sourceSite: string;
+  lat: number | null;
+  lng: number | null;
 }

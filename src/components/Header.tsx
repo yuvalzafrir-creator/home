@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const NAV = [
   { href: "/", label: "לוח בקרה" },
   { href: "/listings", label: "מודעות" },
+  { href: "/map", label: "מפה" },
   { href: "/compare", label: "השוואה" },
   { href: "/profile", label: "פרופיל" },
   { href: "/add", label: "הוספה" },

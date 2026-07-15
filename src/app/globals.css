@@ -706,3 +706,57 @@ article.listing .listing__source {
 .autofill-btn {
   align-self: flex-start;
 }
+
+.map-container {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  /* Own stacking context so Leaflet's high internal z-indexes stay below the
+     sticky header (z-index 20). */
+  position: relative;
+  z-index: 0;
+}
+
+.map-unlocated {
+  margin-top: 28px;
+}
+.map-unlocated h2 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.map-unlocated ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.map-unlocated a {
+  color: var(--accent);
+  font-size: 14px;
+}
+
+.view-toggle {
+  display: inline-flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px;
+}
+.view-toggle button {
+  border: none;
+  background: transparent;
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.view-toggle button[data-active="true"] {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}

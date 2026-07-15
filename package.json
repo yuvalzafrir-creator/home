@@ -9,12 +9,14 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "scrape": "tsx src/scraper/run.ts"
+    "scrape": "tsx src/scraper/run.ts",
+    "geocode": "tsx src/scraper/geocode-backfill.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",
     "@prisma/client": "^6.19.3",
     "cheerio": "^1.2.0",
+    "leaflet": "^1.9.4",
     "next": "14.2.35",
     "playwright": "^1.61.1",
     "prisma": "^6.19.3",
@@ -24,6 +26,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
+    "@types/leaflet": "^1.9.21",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
