@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ListingCard } from "@/components/ListingCard";
 import { SourceLinks } from "@/components/SourceLinks";
 import { ListingsMap, type MapListing } from "@/components/ListingsMap";
@@ -59,9 +59,13 @@ export function ListingsClient() {
     });
   }
 
-  const located: MapListing[] = listings
-    .filter((l) => l.lat !== null && l.lng !== null)
-    .map((l) => ({ id: l.id, address: l.address, price: l.price, lat: l.lat as number, lng: l.lng as number, matchScore: l.matchScore }));
+  const located: MapListing[] = useMemo(
+    () =>
+      listings
+        .filter((l) => l.lat !== null && l.lng !== null)
+        .map((l) => ({ id: l.id, address: l.address, price: l.price, lat: l.lat as number, lng: l.lng as number, matchScore: l.matchScore })),
+    [listings]
+  );
 
   return (
     <main>

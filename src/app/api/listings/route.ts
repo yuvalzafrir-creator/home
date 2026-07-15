@@ -68,37 +68,41 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Listing already exists" }, { status: 409 });
   }
 
-  // Best-effort scoring — a scoring failure (or no API key) must not block
-  // creating the listing. Unlike the bulk scraper (src/scraper/run.ts), which
-  // skips scoring entirely when no PreferenceProfile exists yet (to avoid
-  // needless Claude calls while scraping unscored listings wholesale), a
-  // manually-submitted listing is a single, deliberate action, so we still
-  // attempt scoring with a null learnedSummary — scoreListing already falls
-  // back to "No preferences recorded yet." in that case.
+  // Best-effort enrichment — scoring and geocoding must not block creating the
+  // listing. Unlike the bulk scraper (src/scraper/run.ts), which skips scoring
+  // when no PreferenceProfile exists yet, a manually-submitted listing is a
+  // single deliberate action, so we still attempt scoring with a null
+  // learnedSummary — scoreListing falls back to "No preferences recorded yet."
+  // Scoring (LLM) and geocoding (HTTP) are independent and both non-fatal, so
+  // run them in parallel to avoid stacking their worst-case latencies.
+  const profile = await db.preferenceProfile.findFirst({ orderBy: { createdAt: "desc" } });
+  const listingForScoring = {
+    address: data.address,
+    price: data.price,
+    rooms: data.rooms,
+    sizeSqm: data.sizeSqm,
+    floor: data.floor ?? null,
+    hasParking: data.hasParking,
+    hasBalcony: data.hasBalcony,
+    hasMamad: data.hasMamad,
+    hasElevator: data.hasElevator,
+    description: data.description ?? null,
+  };
+
+  const [scoreRes, geoRes] = await Promise.allSettled([
+    scoreListing(profile ?? { learnedSummary: null }, listingForScoring),
+    geocodeAddress(data.address),
+  ]);
+
   let matchScore: number | null = null;
   let matchReason: string | null = null;
-  const profile = await db.preferenceProfile.findFirst({ orderBy: { createdAt: "desc" } });
-  try {
-    const result = await scoreListing(profile ?? { learnedSummary: null }, {
-      address: data.address,
-      price: data.price,
-      rooms: data.rooms,
-      sizeSqm: data.sizeSqm,
-      floor: data.floor ?? null,
-      hasParking: data.hasParking,
-      hasBalcony: data.hasBalcony,
-      hasMamad: data.hasMamad,
-      hasElevator: data.hasElevator,
-      description: data.description ?? null,
-    });
-    matchScore = result.score;
-    matchReason = result.reason;
-  } catch (err) {
-    console.warn("POST /api/listings: scoring failed, saving unscored:", err);
+  if (scoreRes.status === "fulfilled") {
+    matchScore = scoreRes.value.score;
+    matchReason = scoreRes.value.reason;
+  } else {
+    console.warn("POST /api/listings: scoring failed, saving unscored:", scoreRes.reason);
   }
-
-  // Best-effort geocode for the map — a miss/failure leaves lat/lng null.
-  const geo = await geocodeAddress(data.address);
+  const geo = geoRes.status === "fulfilled" ? geoRes.value : null;
 
   try {
     const listing = await db.listing.create({

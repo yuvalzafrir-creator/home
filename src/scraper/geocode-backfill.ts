@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { geocodeAddress } from "@/lib/geocode";
 
 async function main() {
-  const listings = await db.listing.findMany({ where: { lat: null } });
+  const listings = await db.listing.findMany({ where: { OR: [{ lat: null }, { lng: null }] } });
   console.log(`Geocoding ${listings.length} listing(s)…`);
   for (const l of listings) {
     const geo = await geocodeAddress(l.address);

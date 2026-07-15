@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import "leaflet/dist/leaflet.css";
+import { escapeHtml } from "@/lib/escape-html";
 
 export interface MapListing {
   id: string;
@@ -42,7 +43,7 @@ export function ListingsMap({ listings, height = 420 }: { listings: MapListing[]
         })
           .addTo(map)
           .bindPopup(
-            `<div dir="rtl" style="font-size:13px"><strong>${l.address}</strong><br/>₪${l.price.toLocaleString()}${score}<br/><a href="/listings/${l.id}">לפרטים ←</a></div>`
+            `<div dir="rtl" style="font-size:13px"><strong>${escapeHtml(l.address)}</strong><br/>₪${l.price.toLocaleString()}${score}<br/><a href="/listings/${escapeHtml(l.id)}">לפרטים ←</a></div>`
           );
         points.push([l.lat, l.lng]);
       }
