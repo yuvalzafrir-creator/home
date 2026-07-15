@@ -36,8 +36,8 @@ export function ListingsMap({ listings, height = 420 }: { listings: MapListing[]
         const score = l.matchScore !== null ? ` · ${l.matchScore}/100` : "";
         L.circleMarker([l.lat, l.lng], {
           radius: 9,
-          color: "#2563eb",
-          fillColor: "#2563eb",
+          color: "#b5502e",
+          fillColor: "#b5502e",
           fillOpacity: 0.85,
           weight: 2,
         })
