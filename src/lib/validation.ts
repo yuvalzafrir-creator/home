@@ -49,3 +49,28 @@ export const addListingSchema = z.object({
 });
 
 export type AddListingInput = z.infer<typeof addListingSchema>;
+
+export const profilePatchSchema = z.object({
+  locations: z.array(z.string()).min(1).optional(),
+  budgetMax: z.number().int().positive().optional(),
+  minRooms: z.number().positive().nullable().optional(),
+  minSizeSqm: z.number().int().positive().nullable().optional(),
+  mustHaveExtras: z.array(z.string()).optional(),
+  goal: z.enum(["primary", "investment"]).optional(),
+  openToRenting: z.boolean().optional(),
+  openToFixerUpper: z.boolean().optional(),
+  renovationBudget: z.number().int().nonnegative().nullable().optional(),
+  freeText: z.string().nullable().optional(),
+});
+
+export type ProfilePatch = z.infer<typeof profilePatchSchema>;
+
+// Client-action tool inputs from the assistant. `path` must be an internal
+// route (starts with a single "/") so the model can never redirect the browser
+// to an external URL via router.push.
+export const navigateActionSchema = z.object({
+  path: z.string().regex(/^\/(?!\/)/, "path must be an internal route"),
+});
+export const filterActionSchema = z.object({
+  filter: z.enum(["all", "favorites", "unseen"]),
+});
