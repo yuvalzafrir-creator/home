@@ -5,12 +5,14 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "vercel-build": "node scripts/prepare-prisma-postgres.mjs && prisma generate && prisma db push && next build",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "scrape": "tsx src/scraper/run.ts",
-    "geocode": "tsx src/scraper/geocode-backfill.ts"
+    "geocode": "tsx src/scraper/geocode-backfill.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",
