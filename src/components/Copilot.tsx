@@ -24,8 +24,12 @@ export function Copilot() {
 
   function runActions(actions: Action[]) {
     for (const a of actions) {
-      if (a.type === "navigate" && a.path) router.push(a.path);
-      else if (a.type === "setListingFilter" && a.filter) router.push(`/listings?filter=${a.filter}`);
+      // Only follow internal paths — never an external URL from model output.
+      if (a.type === "navigate" && a.path && a.path.startsWith("/") && !a.path.startsWith("//")) {
+        router.push(a.path);
+      } else if (a.type === "setListingFilter" && a.filter) {
+        router.push(`/listings?filter=${encodeURIComponent(a.filter)}`);
+      }
     }
   }
 

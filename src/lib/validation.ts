@@ -64,3 +64,13 @@ export const profilePatchSchema = z.object({
 });
 
 export type ProfilePatch = z.infer<typeof profilePatchSchema>;
+
+// Client-action tool inputs from the assistant. `path` must be an internal
+// route (starts with a single "/") so the model can never redirect the browser
+// to an external URL via router.push.
+export const navigateActionSchema = z.object({
+  path: z.string().regex(/^\/(?!\/)/, "path must be an internal route"),
+});
+export const filterActionSchema = z.object({
+  filter: z.enum(["all", "favorites", "unseen"]),
+});

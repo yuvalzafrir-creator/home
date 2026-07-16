@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getClaudeClient } from "@/lib/claude";
-import { profilePatchSchema } from "@/lib/validation";
+import { profilePatchSchema, navigateActionSchema, filterActionSchema } from "@/lib/validation";
 import { patchProfile } from "@/lib/profile";
 
 const SYSTEM = `אתה העוזר של HomeScout, אפליקציה לחיפוש דירה. ענה תמיד בעברית, בקצרה וידידותית.
@@ -47,8 +47,6 @@ const tools = [
     },
   },
 ];
-
-const CLIENT_TOOLS = new Set(["navigate", "setListingFilter"]);
 
 export async function POST(req: Request) {
   let body: { messages?: { role: string; content: string }[] };
@@ -104,9 +102,22 @@ export async function POST(req: Request) {
             result = updated ? "ההעדפות עודכנו" : "אין פרופיל לעדכן";
           }
           toolResults.push({ type: "tool_result", tool_use_id: block.id, content: result });
-        } else if (block.name && CLIENT_TOOLS.has(block.name)) {
-          actions.push({ type: block.name, ...(block.input as Record<string, unknown>) });
-          toolResults.push({ type: "tool_result", tool_use_id: block.id, content: "done" });
+        } else if (block.name === "navigate") {
+          const parsed = navigateActionSchema.safeParse(block.input);
+          if (parsed.success) {
+            actions.push({ type: "navigate", path: parsed.data.path });
+            toolResults.push({ type: "tool_result", tool_use_id: block.id, content: "done" });
+          } else {
+            toolResults.push({ type: "tool_result", tool_use_id: block.id, content: "נתיב לא תקין", is_error: true });
+          }
+        } else if (block.name === "setListingFilter") {
+          const parsed = filterActionSchema.safeParse(block.input);
+          if (parsed.success) {
+            actions.push({ type: "setListingFilter", filter: parsed.data.filter });
+            toolResults.push({ type: "tool_result", tool_use_id: block.id, content: "done" });
+          } else {
+            toolResults.push({ type: "tool_result", tool_use_id: block.id, content: "סינון לא תקין", is_error: true });
+          }
         } else {
           toolResults.push({ type: "tool_result", tool_use_id: block.id, content: "unknown tool", is_error: true });
         }
@@ -117,6 +128,10 @@ export async function POST(req: Request) {
     console.error("assistant route error:", err);
     return NextResponse.json({ reply: "מצטער, העוזר אינו זמין כרגע. נסו שוב מאוחר יותר.", actions: [] });
   }
+
+  // The loop can exhaust its iteration cap (or end on a tool turn) without a
+  // final text answer — give the user something rather than a bare ellipsis.
+  if (!reply) reply = actions.length > 0 ? "בוצע." : "לא בטוח שהבנתי — אפשר לנסח מחדש?";
 
   return NextResponse.json({ reply, actions });
 }
