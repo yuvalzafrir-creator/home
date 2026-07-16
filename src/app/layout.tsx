@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Header } from "@/components/Header";
 import { HealthStatus } from "@/components/HealthStatus";
+import { Copilot } from "@/components/Copilot";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -31,6 +32,7 @@ export default function RootLayout({
         <Header />
         <HealthStatus />
         {children}
+        <Copilot />
       </body>
     </html>
   );

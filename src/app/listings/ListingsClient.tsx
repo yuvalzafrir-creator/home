@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ListingCard } from "@/components/ListingCard";
 import { SourceLinks } from "@/components/SourceLinks";
 import { ListingsMap, type MapListing } from "@/components/ListingsMap";
@@ -10,7 +11,11 @@ type FilterOption = "all" | "favorites" | "unseen";
 
 export function ListingsClient() {
   const [listings, setListings] = useState<Listing[]>([]);
-  const [filter, setFilter] = useState<FilterOption>("all");
+  const searchParams = useSearchParams();
+  const paramFilter = searchParams.get("filter");
+  const initialFilter: FilterOption =
+    paramFilter === "favorites" || paramFilter === "unseen" ? paramFilter : "all";
+  const [filter, setFilter] = useState<FilterOption>(initialFilter);
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [view, setView] = useState<"list" | "map">("list");
   const [loading, setLoading] = useState(true);
@@ -25,6 +30,12 @@ export function ListingsClient() {
         setLoading(false);
       });
   }, [filter]);
+
+  useEffect(() => {
+    if (paramFilter === "favorites" || paramFilter === "unseen" || paramFilter === "all") {
+      setFilter(paramFilter);
+    }
+  }, [paramFilter]);
 
   async function handleFeedback(listingId: string, reaction: "like" | "dislike") {
     if (pendingIds.has(listingId)) return;
