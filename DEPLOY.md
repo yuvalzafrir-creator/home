@@ -63,8 +63,12 @@ First load will hit the onboarding gate (empty DB) — fill the form and you're 
 
 ## Notes
 
-- **Data does not migrate** from local SQLite; production starts empty. That's
-  intended (local data was demo/test data).
+- **Data does not migrate** from local SQLite. Instead, the build runs
+  `prisma db seed` (`prisma/seed.ts`) which populates a starter preference
+  profile + a few example listings **only when those tables are empty** — so the
+  app isn't blank on first load, and your real data is never overwritten on
+  later deploys. Edit `prisma/seed.ts` to change the starter content, or empty
+  its arrays if you'd rather start clean. (`npm run seed` runs it locally.)
 - **Scraping / geocoding backfill** (`npm run scrape`, `npm run geocode`) are
   manual/local tools — they don't run on Vercel. To geocode production listings,
   run `npm run geocode` locally against the production `DATABASE_URL`, or wire it
