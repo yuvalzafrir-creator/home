@@ -85,3 +85,26 @@ First load will hit the onboarding gate (empty DB) — fill the form and you're 
   (`scripts/prepare-prisma-postgres.mjs`); the committed
   `prisma/schema.prisma` stays `sqlite` so local dev and `npm test` are
   unaffected.
+
+## Custom domain (optional)
+
+Once the app is deployed, point your own domain at it:
+
+1. **Vercel → your project → Settings → Domains → Add**, and enter your domain
+   (e.g. `homescout.co.il` and/or `www.homescout.co.il`).
+2. Vercel shows the DNS records to add at your **domain registrar** (GoDaddy,
+   Namecheap, Cloudflare, etc.). The usual setup:
+   - **Apex / root** (`homescout.co.il`): an `A` record `@ → 76.76.21.21`.
+   - **`www` subdomain**: a `CNAME` record `www → cname.vercel-dns.com`.
+
+   (Vercel displays the exact values for your case — use those if they differ.
+   Alternatively you can switch your domain's **nameservers** to Vercel's and let
+   it manage DNS entirely.)
+3. Add those records at the registrar and wait for propagation (minutes to a few
+   hours). Vercel auto-issues a free SSL certificate once the records resolve.
+4. Back in **Domains**, pick which is primary and set the `www` ↔ apex redirect
+   you prefer.
+
+No code changes are needed — the app serves on whatever domain Vercel routes to
+it. If you use auth or absolute URLs later, add the domain to any relevant env
+vars at that point.
