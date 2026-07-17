@@ -28,6 +28,17 @@ describe("patchProfile", () => {
     expect(updated!.locations).toEqual(["Tel Aviv"]);
   });
 
+  it("round-trips settlementTypes and defaults to an empty array", async () => {
+    const created = await seedProfile();
+    // A profile seeded without settlementTypes reads back as [] (column default).
+    const before = await patchProfile({});
+    expect(before!.settlementTypes).toEqual([]);
+    expect(created.id).toBeTruthy();
+
+    const updated = await patchProfile({ settlementTypes: ["עיר", "מושב"] });
+    expect(updated!.settlementTypes).toEqual(["עיר", "מושב"]);
+  });
+
   it("returns null when no profile exists", async () => {
     expect(await patchProfile({ budgetMax: 1 })).toBeNull();
   });

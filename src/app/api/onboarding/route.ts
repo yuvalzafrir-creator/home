@@ -27,6 +27,7 @@ export async function POST(req: Request) {
     minRooms: data.minRooms ?? null,
     minSizeSqm: data.minSizeSqm ?? null,
     mustHaveExtras: JSON.stringify(data.mustHaveExtras),
+    settlementTypes: JSON.stringify(data.settlementTypes),
     goal: data.goal,
     openToRenting: data.openToRenting,
     openToFixerUpper: data.openToFixerUpper,

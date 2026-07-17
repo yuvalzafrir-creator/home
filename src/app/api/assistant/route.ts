@@ -20,6 +20,7 @@ const tools = [
         minRooms: { type: "number" },
         minSizeSqm: { type: "number" },
         mustHaveExtras: { type: "array", items: { type: "string" } },
+        settlementTypes: { type: "array", items: { type: "string" }, description: "e.g. עיר, מושב, יישוב קהילתי, קיבוץ, כפר" },
         goal: { type: "string", enum: ["primary", "investment"] },
         openToRenting: { type: "boolean" },
         openToFixerUpper: { type: "boolean" },
