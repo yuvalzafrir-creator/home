@@ -42,6 +42,7 @@ model PreferenceProfile {
   minRooms         Float?
   minSizeSqm       Int?
   mustHaveExtras   String
+  settlementTypes  String   @default("[]")
   goal             String
   openToRenting    Boolean  @default(false)
   openToFixerUpper Boolean  @default(false)

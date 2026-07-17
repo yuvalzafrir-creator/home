@@ -8,6 +8,7 @@ export interface ProfileData {
   minRooms: number | null;
   minSizeSqm: number | null;
   mustHaveExtras: string[];
+  settlementTypes: string[];
   goal: string;
   openToRenting: boolean;
   openToFixerUpper: boolean;
@@ -28,6 +29,7 @@ export async function getProfile(): Promise<ProfileData | null> {
     minRooms: row.minRooms,
     minSizeSqm: row.minSizeSqm,
     mustHaveExtras: JSON.parse(row.mustHaveExtras),
+    settlementTypes: JSON.parse(row.settlementTypes),
     goal: row.goal,
     openToRenting: row.openToRenting,
     openToFixerUpper: row.openToFixerUpper,
@@ -50,6 +52,7 @@ export async function patchProfile(patch: ProfilePatch): Promise<ProfileData | n
   if (patch.minRooms !== undefined) data.minRooms = patch.minRooms;
   if (patch.minSizeSqm !== undefined) data.minSizeSqm = patch.minSizeSqm;
   if (patch.mustHaveExtras !== undefined) data.mustHaveExtras = JSON.stringify(patch.mustHaveExtras);
+  if (patch.settlementTypes !== undefined) data.settlementTypes = JSON.stringify(patch.settlementTypes);
   if (patch.goal !== undefined) data.goal = patch.goal;
   if (patch.openToRenting !== undefined) data.openToRenting = patch.openToRenting;
   if (patch.openToFixerUpper !== undefined) data.openToFixerUpper = patch.openToFixerUpper;

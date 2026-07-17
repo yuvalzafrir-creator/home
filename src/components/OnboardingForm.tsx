@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ProfileData } from "@/lib/profile";
 
+const SETTLEMENT_TYPES = ["עיר", "מושב", "יישוב קהילתי", "קיבוץ", "כפר"];
+
 interface OnboardingFormProps {
   mode?: "create" | "edit";
   initial?: ProfileData | null;
@@ -28,6 +30,7 @@ export function OnboardingForm({ mode = "create", initial = null }: OnboardingFo
       minRooms: form.get("minRooms") ? Number(form.get("minRooms")) : undefined,
       minSizeSqm: form.get("minSizeSqm") ? Number(form.get("minSizeSqm")) : undefined,
       mustHaveExtras: String(form.get("mustHaveExtras") ?? "").split(",").map((s) => s.trim()).filter(Boolean),
+      settlementTypes: form.getAll("settlementType").map(String),
       goal: form.get("goal"),
       openToRenting: form.get("openToRenting") === "on",
       openToFixerUpper: form.get("openToFixerUpper") === "on",
@@ -62,6 +65,22 @@ export function OnboardingForm({ mode = "create", initial = null }: OnboardingFo
   return (
     <form onSubmit={handleSubmit}>
       <label>אזורים (מופרדים בפסיקים)<input name="locations" required defaultValue={csv(initial?.locations)} /></label>
+      <div className="field-group">
+        <span className="field-group__label">סוג יישוב</span>
+        <div className="checkbox-row">
+          {SETTLEMENT_TYPES.map((t) => (
+            <label key={t}>
+              <input
+                type="checkbox"
+                name="settlementType"
+                value={t}
+                defaultChecked={initial?.settlementTypes?.includes(t) ?? false}
+              />
+              {t}
+            </label>
+          ))}
+        </div>
+      </div>
       <label>תקציב מקסימלי (₪)<input name="budgetMax" type="number" required defaultValue={initial?.budgetMax ?? ""} /></label>
       <label>מינימום חדרים<input name="minRooms" type="number" step="0.5" defaultValue={initial?.minRooms ?? ""} /></label>
       <label>מינימום שטח (מ&quot;ר)<input name="minSizeSqm" type="number" defaultValue={initial?.minSizeSqm ?? ""} /></label>

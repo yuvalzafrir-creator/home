@@ -924,3 +924,19 @@ article.listing .listing__source {
 .copilot-input button {
   flex: none;
 }
+
+/* ---------- Checkbox group (settlement type) ---------- */
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.field-group__label {
+  font-size: 14px;
+  font-weight: 550;
+}
+.checkbox-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
