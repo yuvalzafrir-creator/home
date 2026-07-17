@@ -37,8 +37,8 @@ Easiest is **Vercel Postgres** (or **Neon** — free tier is fine):
 - Vercel → **Add New → Project** → import your GitHub repo.
 - Framework preset: **Next.js** (auto-detected).
 - **Build command:** leave default — Vercel runs the `vercel-build` script in
-  `package.json`, which swaps Prisma to Postgres, syncs the schema
-  (`prisma db push`), and builds.
+  `package.json`, which swaps Prisma to Postgres, applies the versioned
+  migrations (`prisma migrate deploy`), and builds.
 
 ## 4. Set environment variables
 
@@ -55,8 +55,9 @@ Preview):
 Trigger a deploy (push to `main`, or **Redeploy** in Vercel). On build, Vercel:
 
 1. installs deps (`postinstall` → `prisma generate`),
-2. runs `vercel-build`: swap provider → `prisma generate` → `prisma db push`
-   (creates the tables in your Postgres) → `next build`.
+2. runs `vercel-build`: swap provider + Postgres migration set →
+   `prisma generate` → `prisma migrate deploy` (creates the tables in your
+   Postgres) → `next build`.
 
 First load will hit the onboarding gate (empty DB) — fill the form and you're in.
 
@@ -68,9 +69,15 @@ First load will hit the onboarding gate (empty DB) — fill the form and you're 
   manual/local tools — they don't run on Vercel. To geocode production listings,
   run `npm run geocode` locally against the production `DATABASE_URL`, or wire it
   into a scheduled job later.
-- **Schema changes:** `prisma db push` syncs the schema on each deploy (no
-  migration history). Fine for a single-user app; switch to
-  `prisma migrate deploy` if you later want versioned migrations.
-- The provider swap is build-only (`scripts/prepare-prisma-postgres.mjs`); the
-  committed `prisma/schema.prisma` stays `sqlite` so local dev and
-  `npm test` are unaffected.
+- **Schema changes / migrations:** production uses versioned migrations
+  (`prisma migrate deploy`). The Postgres migration set lives in
+  `prisma/migrations-pg/` and is swapped into place at build time; local
+  dev/test keep their own SQLite migrations in `prisma/migrations/`. When you
+  change `prisma/schema.prisma`, add a new SQL migration under
+  `prisma/migrations-pg/<name>/migration.sql` (generate it with
+  `prisma migrate diff --from-schema-datamodel <old> --to-schema-datamodel <new> --script`)
+  so prod and local stay in sync.
+- The provider + migration swap is build-only
+  (`scripts/prepare-prisma-postgres.mjs`); the committed
+  `prisma/schema.prisma` stays `sqlite` so local dev and `npm test` are
+  unaffected.
