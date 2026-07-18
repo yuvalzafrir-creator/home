@@ -22,7 +22,8 @@ describe("getLocalityInsight", () => {
           },
         ])
       )
-      .mockResolvedValueOnce(ckan([{ "LOCALITY SYMBOL": 5000, "ESHKOL 2019": 8 }]));
+      .mockResolvedValueOnce(ckan([{ "LOCALITY SYMBOL": 5000, "ESHKOL 2019": 8 }]))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ result: { total: 17345 } }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
     const r = await getLocalityInsight("תל אביב");
@@ -32,6 +33,7 @@ describe("getLocalityInsight", () => {
     expect(r.households).toBe(210336);
     expect(r.avgHouseholdSize).toBe(2.2);
     expect(r.socioeconomicCluster).toBe(8);
+    expect(r.recordedOffenses).toBe(17345);
   });
 
   it("returns nulls when the locality isn't found", async () => {

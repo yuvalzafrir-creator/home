@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { LocalityInsight } from "@/lib/insights";
+import { CRIME_YEAR, type LocalityInsight } from "@/lib/insights";
 
 function fmt(n: number | null): string {
   return n === null ? "—" : n.toLocaleString("he-IL");
@@ -52,6 +52,16 @@ export function LocationInsights() {
                   <div>
                     <dt>אשכול חברתי-כלכלי</dt>
                     <dd>{it.socioeconomicCluster}/10</dd>
+                  </div>
+                )}
+                {it.recordedOffenses !== null && (
+                  <div>
+                    <dt>עבירות ל-1,000 תושבים ({CRIME_YEAR})</dt>
+                    <dd>
+                      {it.population
+                        ? (Math.round((it.recordedOffenses / it.population) * 1000 * 10) / 10).toLocaleString("he-IL")
+                        : it.recordedOffenses.toLocaleString("he-IL")}
+                    </dd>
                   </div>
                 )}
               </dl>

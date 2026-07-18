@@ -11,13 +11,18 @@ export interface LocalityInsight {
   households: number | null;
   avgHouseholdSize: number | null;
   socioeconomicCluster: number | null; // אשכול 1–10 (higher = higher SES)
+  recordedOffenses: number | null; // police-recorded offenses in CRIME_YEAR
 }
+
+export const CRIME_YEAR = 2022;
 
 const CKAN = "https://data.gov.il/api/3/action/datastore_search";
 // 2022 census — population & households by locality (includes cities).
 const POPULATION_RESOURCE = "38207cf8-afe2-48ed-a3b0-c8f70c796015";
 // Socioeconomic cluster (אשכול 2019) by locality symbol.
 const SES_RESOURCE = "7c860e04-9f8d-41c2-9f24-6249958d2081";
+// Police-recorded offenses (one row per case) for CRIME_YEAR, keyed by YeshuvKod.
+const CRIME_RESOURCE = "a59f3e9e-a7fe-4375-97d0-76cea68382c1";
 
 const DAY = 60 * 60 * 24;
 
@@ -42,6 +47,17 @@ async function ckanSearch(params: string): Promise<CkanRecord[]> {
   return json?.result?.records ?? [];
 }
 
+// Returns just the total row count matching a query (used with limit=0).
+async function ckanCount(params: string): Promise<number | null> {
+  const res = await fetch(`${CKAN}?${params}`, {
+    next: { revalidate: DAY },
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) return null;
+  const json = (await res.json()) as { result?: { total?: number } };
+  return typeof json?.result?.total === "number" ? json.result.total : null;
+}
+
 function empty(query: string): LocalityInsight {
   return {
     query,
@@ -51,6 +67,7 @@ function empty(query: string): LocalityInsight {
     households: null,
     avgHouseholdSize: null,
     socioeconomicCluster: null,
+    recordedOffenses: null,
   };
 }
 
@@ -73,22 +90,25 @@ export async function getLocalityInsight(query: string): Promise<LocalityInsight
       households: toNum(rec.Households),
       avgHouseholdSize: toNum(rec.Average_size_of_household),
       socioeconomicCluster: null,
+      recordedOffenses: null,
     };
 
     if (insight.localityCode !== null) {
-      try {
-        const filters = encodeURIComponent(
-          JSON.stringify({ "LOCALITY SYMBOL": insight.localityCode })
-        );
-        const sesRecords = await ckanSearch(
-          `resource_id=${SES_RESOURCE}&filters=${filters}&limit=1`
-        );
-        if (sesRecords[0]) {
-          insight.socioeconomicCluster = toNum(sesRecords[0]["ESHKOL 2019"]);
-        }
-      } catch {
-        // socioeconomic is best-effort — leave null on any failure
-      }
+      // Both keyed on the CBS locality symbol; each best-effort (null on failure).
+      const [ses, offenses] = await Promise.all([
+        ckanSearch(
+          `resource_id=${SES_RESOURCE}&filters=${encodeURIComponent(
+            JSON.stringify({ "LOCALITY SYMBOL": insight.localityCode })
+          )}&limit=1`
+        ).catch(() => [] as CkanRecord[]),
+        ckanCount(
+          `resource_id=${CRIME_RESOURCE}&filters=${encodeURIComponent(
+            JSON.stringify({ YeshuvKod: insight.localityCode })
+          )}&limit=0`
+        ).catch(() => null),
+      ]);
+      if (ses[0]) insight.socioeconomicCluster = toNum(ses[0]["ESHKOL 2019"]);
+      insight.recordedOffenses = offenses;
     }
 
     return insight;
