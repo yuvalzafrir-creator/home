@@ -32,7 +32,28 @@ model Listing {
   lastSeenAt   DateTime   @default(now())
   matchScore   Int?
   matchReason  String?
+  addedById    String?
+  addedBy      Member?    @relation(fields: [addedById], references: [id])
   feedback     Feedback[]
+  noteThread   Note[]
+}
+
+model Member {
+  id        String    @id @default(cuid())
+  name      String
+  createdAt DateTime  @default(now())
+  listings  Listing[]
+  notes     Note[]
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id])
+  memberId  String?
+  member    Member?  @relation(fields: [memberId], references: [id])
+  text      String
+  createdAt DateTime @default(now())
 }
 
 model PreferenceProfile {
