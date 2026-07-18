@@ -997,3 +997,133 @@ article.listing .listing__source {
   font-size: 12px;
   color: var(--text-muted);
 }
+
+/* ---------- Member picker ---------- */
+.member-picker {
+  position: relative;
+  flex: none;
+}
+.member-picker__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px 5px 6px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 550;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.member-picker__avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+.member-picker__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  inset-inline-start: 0;
+  min-width: 180px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  padding: 6px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.member-picker__item {
+  text-align: start;
+  border: none;
+  background: transparent;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+}
+.member-picker__item:hover {
+  background: var(--surface-muted);
+}
+.member-picker__item[data-active="true"] {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.member-picker__hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 4px 10px;
+}
+.member-picker__add {
+  display: flex;
+  gap: 6px;
+  padding: 6px 4px 2px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+  flex-direction: row;
+}
+.member-picker__add input {
+  flex: 1;
+  width: auto;
+  height: 32px;
+  padding: 4px 8px;
+}
+.member-picker__add button {
+  flex: none;
+  padding: 4px 12px;
+}
+
+/* ---------- Note thread ---------- */
+.detail-addedby {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-top: 4px;
+}
+.note-thread {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.note {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+}
+.note__head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.note__author {
+  font-weight: 600;
+  font-size: 13px;
+}
+.note__date {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.note__text {
+  font-size: 14px;
+  white-space: pre-wrap;
+}
+.note-thread__empty {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+.note-add {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

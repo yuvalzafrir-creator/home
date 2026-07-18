@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { addListingSchema } from "@/lib/validation";
 import { scoreListing } from "@/lib/scoring";
 import { geocodeAddress } from "@/lib/geocode";
+import { getActiveMemberId } from "@/lib/members";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -18,7 +19,7 @@ export async function GET(req: Request) {
   const listings = await db.listing.findMany({
     where,
     orderBy: { matchScore: "desc" },
-    include: { feedback: true },
+    include: { feedback: true, addedBy: { select: { name: true } } },
   });
 
   return NextResponse.json({ listings });
@@ -123,6 +124,7 @@ export async function POST(req: Request) {
         matchReason,
         lat: geo?.lat ?? null,
         lng: geo?.lng ?? null,
+        addedById: getActiveMemberId(),
       },
     });
     return NextResponse.json({ listing }, { status: 201 });

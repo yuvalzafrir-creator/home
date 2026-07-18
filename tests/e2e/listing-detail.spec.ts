@@ -57,6 +57,7 @@ test.describe("listing detail + notes", () => {
   });
 
   test.afterEach(async () => {
+    await db.note.deleteMany({ where: { listingId } });
     await db.listing.delete({ where: { id: listingId } });
     if (createdProfileId) {
       await db.preferenceProfile.delete({ where: { id: createdProfileId } });
@@ -68,18 +69,18 @@ test.describe("listing detail + notes", () => {
     await db.$disconnect();
   });
 
-  test("shows facts and persists a note across reloads", async ({ page }) => {
+  test("shows facts and persists a thread note across reloads", async ({ page }) => {
     await page.goto(`/listings/${listingId}`);
 
     await expect(page.locator("h1")).toContainText("Detail Test St");
     await expect(page.getByText('78 מ"ר')).toBeVisible();
 
     const note = `visit Sunday ${Date.now()}`;
-    await page.fill("textarea", note);
-    await page.getByRole("button", { name: "שמירת הערות", exact: true }).click();
-    await expect(page.getByText("ההערות נשמרו.")).toBeVisible();
+    await page.getByLabel("הוספת הערה").fill(note);
+    await page.getByRole("button", { name: "הוספת הערה", exact: true }).click();
+    await expect(page.getByText(note)).toBeVisible();
 
     await page.reload();
-    await expect(page.locator("textarea")).toHaveValue(note);
+    await expect(page.getByText(note)).toBeVisible();
   });
 });

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { MemberPicker } from "@/components/MemberPicker";
 
 const NAV = [
   { href: "/", label: "לוח בקרה" },
@@ -33,6 +34,7 @@ export function Header() {
             </Link>
           ))}
         </nav>
+        <MemberPicker />
       </div>
     </header>
   );

@@ -10,4 +10,5 @@ export interface Listing {
   sourceSite: string;
   lat: number | null;
   lng: number | null;
+  addedBy?: { name: string } | null;
 }

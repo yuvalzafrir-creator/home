@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getProfile } from "@/lib/profile";
-import { ListingNotes } from "@/components/ListingNotes";
+import { NoteThread, type ThreadNote } from "@/components/NoteThread";
 import { ListingsMap } from "@/components/ListingsMap";
 
 export const dynamic = "force-dynamic";
@@ -11,8 +11,23 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
   const profile = await getProfile();
   if (!profile) redirect("/onboarding");
 
-  const listing = await db.listing.findUnique({ where: { id: params.id } });
+  const listing = await db.listing.findUnique({
+    where: { id: params.id },
+    include: { addedBy: { select: { name: true } } },
+  });
   if (!listing) notFound();
+
+  const noteRows = await db.note.findMany({
+    where: { listingId: params.id },
+    orderBy: { createdAt: "asc" },
+    include: { member: { select: { name: true } } },
+  });
+  const notes: ThreadNote[] = noteRows.map((n) => ({
+    id: n.id,
+    text: n.text,
+    createdAt: n.createdAt.toISOString(),
+    member: n.member ? { name: n.member.name } : null,
+  }));
 
   const amenities = [
     { label: "ממ\"ד", on: listing.hasMamad },
@@ -30,6 +45,7 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
         <div>
           <h1>{listing.address}</h1>
           {listing.neighborhood && <p className="detail-neighborhood">{listing.neighborhood}</p>}
+          {listing.addedBy && <p className="detail-addedby">נוסף ע&quot;י {listing.addedBy.name}</p>}
         </div>
         {listing.matchScore !== null && (
           <span className="detail-score">{listing.matchScore}/100 התאמה</span>
@@ -72,7 +88,7 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
         </section>
       )}
 
-      <ListingNotes listingId={listing.id} initialNotes={listing.notes} />
+      <NoteThread listingId={listing.id} initial={notes} />
 
       <a href={listing.sourceUrl} target="_blank" rel="noopener noreferrer" className="detail-source">
         למודעה המקורית ↗
