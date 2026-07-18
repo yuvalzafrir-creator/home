@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getProfile } from "@/lib/profile";
+import { LocationInsights } from "@/components/LocationInsights";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,13 @@ export default async function DashboardPage() {
           <div className="dash-tile"><span>תקציב</span><strong>₪{profile.budgetMax.toLocaleString()}</strong></div>
           <div className="dash-tile"><span>חדרים</span><strong>{profile.minRooms ? `${profile.minRooms}+` : "—"}</strong></div>
         </div>
+      </section>
+
+      <section className="dash-section">
+        <div className="dash-section__head">
+          <h2>תובנות על האזורים שלך</h2>
+        </div>
+        <LocationInsights />
       </section>
 
       <section className="dash-section">
