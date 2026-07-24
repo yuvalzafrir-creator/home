@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import { Header } from "@/components/Header";
 import { HealthStatus } from "@/components/HealthStatus";
 import { Copilot } from "@/components/Copilot";
+import { getSessionHouseholdId } from "@/lib/auth";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -26,13 +27,14 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const authed = getSessionHouseholdId() !== null;
   return (
     <html lang="he" dir="rtl">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <Header />
-        <HealthStatus />
+        {authed && <Header />}
+        {authed && <HealthStatus />}
         {children}
-        <Copilot />
+        {authed && <Copilot />}
       </body>
     </html>
   );

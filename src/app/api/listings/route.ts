@@ -3,18 +3,22 @@ import { db } from "@/lib/db";
 import { addListingSchema } from "@/lib/validation";
 import { scoreListing } from "@/lib/scoring";
 import { geocodeAddress } from "@/lib/geocode";
-import { getActiveMemberId } from "@/lib/members";
+import { resolveActiveMemberId } from "@/lib/members";
+import { getSessionHouseholdId } from "@/lib/auth";
 
 export async function GET(req: Request) {
+  const householdId = getSessionHouseholdId();
+  if (!householdId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const { searchParams } = new URL(req.url);
   const filter = searchParams.get("filter");
 
   const where =
     filter === "favorites"
-      ? { feedback: { some: { reaction: "like" } } }
+      ? { householdId, feedback: { some: { reaction: "like" } } }
       : filter === "unseen"
-      ? { feedback: { none: {} } }
-      : {};
+      ? { householdId, feedback: { none: {} } }
+      : { householdId };
 
   const listings = await db.listing.findMany({
     where,
@@ -50,6 +54,9 @@ function normalizeUrl(url: string): string {
 }
 
 export async function POST(req: Request) {
+  const householdId = getSessionHouseholdId();
+  if (!householdId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   let body: unknown;
   try {
     body = await req.json();
@@ -64,7 +71,7 @@ export async function POST(req: Request) {
   const data = parsed.data;
 
   const sourceUrl = normalizeUrl(data.url);
-  const duplicate = await db.listing.findUnique({ where: { sourceUrl } });
+  const duplicate = await db.listing.findFirst({ where: { householdId, sourceUrl } });
   if (duplicate) {
     return NextResponse.json({ error: "Listing already exists" }, { status: 409 });
   }
@@ -76,7 +83,7 @@ export async function POST(req: Request) {
   // learnedSummary — scoreListing falls back to "No preferences recorded yet."
   // Scoring (LLM) and geocoding (HTTP) are independent and both non-fatal, so
   // run them in parallel to avoid stacking their worst-case latencies.
-  const profile = await db.preferenceProfile.findFirst({ orderBy: { createdAt: "desc" } });
+  const profile = await db.preferenceProfile.findUnique({ where: { householdId } });
   const listingForScoring = {
     address: data.address,
     price: data.price,
@@ -108,6 +115,7 @@ export async function POST(req: Request) {
   try {
     const listing = await db.listing.create({
       data: {
+        householdId,
         sourceSite: deriveSourceSite(sourceUrl),
         sourceUrl,
         address: data.address,
@@ -124,7 +132,7 @@ export async function POST(req: Request) {
         matchReason,
         lat: geo?.lat ?? null,
         lng: geo?.lng ?? null,
-        addedById: getActiveMemberId(),
+        addedById: await resolveActiveMemberId(householdId),
       },
     });
     return NextResponse.json({ listing }, { status: 201 });

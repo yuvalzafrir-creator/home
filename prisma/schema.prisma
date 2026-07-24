@@ -7,10 +7,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Household {
+  id           String             @id @default(cuid())
+  name         String             @unique
+  passwordHash String
+  createdAt    DateTime           @default(now())
+  profile      PreferenceProfile?
+  listings     Listing[]
+  members      Member[]
+}
+
 model Listing {
   id           String     @id @default(cuid())
+  householdId  String
+  household    Household  @relation(fields: [householdId], references: [id])
   sourceSite   String
-  sourceUrl    String     @unique
+  sourceUrl    String
   address      String
   price        Int
   rooms        Float
@@ -36,14 +48,18 @@ model Listing {
   addedBy      Member?    @relation(fields: [addedById], references: [id])
   feedback     Feedback[]
   noteThread   Note[]
+
+  @@unique([householdId, sourceUrl])
 }
 
 model Member {
-  id        String    @id @default(cuid())
-  name      String
-  createdAt DateTime  @default(now())
-  listings  Listing[]
-  notes     Note[]
+  id          String    @id @default(cuid())
+  householdId String
+  household   Household @relation(fields: [householdId], references: [id])
+  name        String
+  createdAt   DateTime  @default(now())
+  listings    Listing[]
+  notes       Note[]
 }
 
 model Note {
@@ -57,7 +73,9 @@ model Note {
 }
 
 model PreferenceProfile {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
+  householdId      String    @unique
+  household        Household @relation(fields: [householdId], references: [id])
   locations        String
   budgetMax        Int
   minRooms         Float?

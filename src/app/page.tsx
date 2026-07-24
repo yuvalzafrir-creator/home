@@ -2,19 +2,24 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getProfile } from "@/lib/profile";
+import { getSessionHouseholdId } from "@/lib/auth";
 import { LocationInsights } from "@/components/LocationInsights";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  const householdId = getSessionHouseholdId();
+  if (!householdId) redirect("/login");
   const profile = await getProfile();
   if (!profile) redirect("/onboarding");
 
   const favorites = await db.listing.findMany({
-    where: { feedback: { some: { reaction: "like" } } },
+    where: { householdId, feedback: { some: { reaction: "like" } } },
     orderBy: { matchScore: "desc" },
   });
-  const newCount = await db.listing.count({ where: { feedback: { none: {} } } });
+  const newCount = await db.listing.count({
+    where: { householdId, feedback: { none: {} } },
+  });
 
   return (
     <main>

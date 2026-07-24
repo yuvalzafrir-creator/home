@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import type { ProfilePatch } from "@/lib/validation";
+import { getSessionHouseholdId } from "@/lib/auth";
 
 export interface ProfileData {
   id: string;
@@ -17,10 +18,13 @@ export interface ProfileData {
   exampleUrls: string[];
 }
 
-// Single-user tool: there is at most one PreferenceProfile. Return it with the
-// JSON-string columns parsed back into arrays, or null if onboarding hasn't run.
+// The signed-in household's preference profile (one per household), with the
+// JSON-string columns parsed back into arrays. null if not signed in or the
+// household hasn't onboarded yet.
 export async function getProfile(): Promise<ProfileData | null> {
-  const row = await db.preferenceProfile.findFirst({ orderBy: { createdAt: "desc" } });
+  const householdId = getSessionHouseholdId();
+  if (!householdId) return null;
+  const row = await db.preferenceProfile.findUnique({ where: { householdId } });
   if (!row) return null;
   return {
     id: row.id,
@@ -39,11 +43,12 @@ export async function getProfile(): Promise<ProfileData | null> {
   };
 }
 
-// Partial update of the single profile. Only keys present in `patch` are
-// written; array fields are re-serialized to JSON strings. Returns the parsed
-// updated profile, or null if onboarding hasn't happened yet.
+// Partial update of the signed-in household's profile. null if not signed in or
+// no profile yet.
 export async function patchProfile(patch: ProfilePatch): Promise<ProfileData | null> {
-  const existing = await db.preferenceProfile.findFirst({ orderBy: { createdAt: "desc" } });
+  const householdId = getSessionHouseholdId();
+  if (!householdId) return null;
+  const existing = await db.preferenceProfile.findUnique({ where: { householdId } });
   if (!existing) return null;
 
   const data: Record<string, unknown> = {};
@@ -59,6 +64,6 @@ export async function patchProfile(patch: ProfilePatch): Promise<ProfileData | n
   if (patch.renovationBudget !== undefined) data.renovationBudget = patch.renovationBudget;
   if (patch.freeText !== undefined) data.freeText = patch.freeText;
 
-  await db.preferenceProfile.update({ where: { id: existing.id }, data });
+  await db.preferenceProfile.update({ where: { householdId }, data });
   return getProfile();
 }

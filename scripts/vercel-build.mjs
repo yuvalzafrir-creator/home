@@ -61,7 +61,6 @@ const steps = [
   "node scripts/prepare-prisma-postgres.mjs",
   "npx prisma generate",
   "npx prisma migrate deploy",
-  "npx prisma db seed",
   "npx next build",
 ];
 

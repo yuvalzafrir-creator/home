@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { onboardingSchema } from "@/lib/validation";
 import { getProfile } from "@/lib/profile";
+import { getSessionHouseholdId } from "@/lib/auth";
 
 export async function GET() {
   const profile = await getProfile();
@@ -9,6 +10,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const householdId = getSessionHouseholdId();
+  if (!householdId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   let body: unknown;
   try {
     body = await req.json();
@@ -36,11 +40,11 @@ export async function POST(req: Request) {
     exampleUrls: JSON.stringify(data.exampleUrls),
   };
 
-  // Single-user tool: update the existing profile if present, else create.
-  const existing = await getProfile();
+  // One profile per household — update if present, else create.
+  const existing = await db.preferenceProfile.findUnique({ where: { householdId } });
   const profile = existing
-    ? await db.preferenceProfile.update({ where: { id: existing.id }, data: fields })
-    : await db.preferenceProfile.create({ data: fields });
+    ? await db.preferenceProfile.update({ where: { householdId }, data: fields })
+    : await db.preferenceProfile.create({ data: { householdId, ...fields } });
 
   return NextResponse.json({ profile });
 }

@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import { getProfile } from "@/lib/profile";
 import { AddListingForm } from "@/components/AddListingForm";
+import { getSessionHouseholdId } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function AddPage() {
+  if (!getSessionHouseholdId()) redirect("/login");
   const profile = await getProfile();
   if (!profile) redirect("/onboarding");
 

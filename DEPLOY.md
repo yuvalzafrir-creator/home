@@ -49,6 +49,12 @@ Preview):
 |------|-------|
 | `DATABASE_URL` | your Postgres connection string (skip if using Vercel Postgres — it's injected) |
 | `ANTHROPIC_API_KEY` | your Anthropic API key |
+| `SESSION_SECRET` | **required for security** — a long random string that signs login sessions. Generate one with `openssl rand -hex 32` (or `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`) and paste the result. Without it the app falls back to a public dev secret and any family's session could be forged. |
+
+> **Note — clean start:** the multi-family migration clears any pre-existing
+> listings, profiles and notes (they belonged to no family) the first time it
+> runs. After that, each family signs up with a family name + password and only
+> ever sees their own data.
 
 ## 5. Deploy
 

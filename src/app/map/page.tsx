@@ -3,15 +3,18 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getProfile } from "@/lib/profile";
 import { ListingsMap, type MapListing } from "@/components/ListingsMap";
+import { getSessionHouseholdId } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function MapPage() {
+  const householdId = getSessionHouseholdId();
+  if (!householdId) redirect("/login");
   const profile = await getProfile();
   if (!profile) redirect("/onboarding");
 
   const all = await db.listing.findMany({
-    where: { status: "active" },
+    where: { householdId, status: "active" },
     orderBy: { matchScore: "desc" },
   });
 

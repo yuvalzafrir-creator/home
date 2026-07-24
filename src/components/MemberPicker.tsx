@@ -66,6 +66,12 @@ export function MemberPicker() {
     }
   }
 
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
+
   const activeName = members.find((m) => m.id === active)?.name;
 
   return (
@@ -104,6 +110,9 @@ export function MemberPicker() {
               +
             </button>
           </form>
+          <button type="button" className="member-picker__logout" onClick={logout}>
+            התנתקות
+          </button>
         </div>
       )}
     </div>

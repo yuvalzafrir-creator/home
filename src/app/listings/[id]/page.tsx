@@ -4,15 +4,18 @@ import { db } from "@/lib/db";
 import { getProfile } from "@/lib/profile";
 import { NoteThread, type ThreadNote } from "@/components/NoteThread";
 import { ListingsMap } from "@/components/ListingsMap";
+import { getSessionHouseholdId } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function ListingDetailPage({ params }: { params: { id: string } }) {
+  const householdId = getSessionHouseholdId();
+  if (!householdId) redirect("/login");
   const profile = await getProfile();
   if (!profile) redirect("/onboarding");
 
-  const listing = await db.listing.findUnique({
-    where: { id: params.id },
+  const listing = await db.listing.findFirst({
+    where: { id: params.id, householdId },
     include: { addedBy: { select: { name: true } } },
   });
   if (!listing) notFound();

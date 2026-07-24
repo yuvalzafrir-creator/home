@@ -70,6 +70,11 @@ export type ProfilePatch = z.infer<typeof profilePatchSchema>;
 // Client-action tool inputs from the assistant. `path` must be an internal
 // route (starts with a single "/") so the model can never redirect the browser
 // to an external URL via router.push.
+export const authSchema = z.object({
+  name: z.string().trim().min(1).max(40),
+  password: z.string().min(6).max(100),
+});
+
 export const navigateActionSchema = z.object({
   path: z.string().regex(/^\/(?!\/)/, "path must be an internal route"),
 });

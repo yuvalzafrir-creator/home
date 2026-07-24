@@ -1,30 +1,34 @@
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 
-// Lightweight household "who are you" identity — no auth. The active member is
-// remembered in a cookie the picker sets client-side; the server reads it to
-// attribute added listings and notes.
+// Which household member (attribution) is "you" on this device — no auth, just a
+// picker stored in a cookie. Always resolved against the signed-in household so
+// a tampered cookie can never attribute to another household's member.
 export const MEMBER_COOKIE = "memberId";
 
-export async function getMembers() {
-  return db.member.findMany({ orderBy: { createdAt: "asc" } });
+export async function getMembers(householdId: string) {
+  return db.member.findMany({ where: { householdId }, orderBy: { createdAt: "asc" } });
 }
 
-export async function createMember(name: string) {
-  return db.member.create({ data: { name } });
+export async function createMember(householdId: string, name: string) {
+  return db.member.create({ data: { householdId, name } });
 }
 
-export function getActiveMemberId(): string | null {
+function activeMemberCookie(): string | null {
   try {
     return cookies().get(MEMBER_COOKIE)?.value ?? null;
   } catch {
-    // Called outside a request context (e.g. a unit test) — no active member.
     return null;
   }
 }
 
-export async function getActiveMember() {
-  const id = getActiveMemberId();
+// The active member's id, but only if it belongs to this household — else null.
+export async function resolveActiveMemberId(householdId: string): Promise<string | null> {
+  const id = activeMemberCookie();
   if (!id) return null;
-  return db.member.findUnique({ where: { id } });
+  const member = await db.member.findFirst({
+    where: { id, householdId },
+    select: { id: true },
+  });
+  return member ? member.id : null;
 }

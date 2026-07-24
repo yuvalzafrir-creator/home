@@ -48,11 +48,21 @@ export async function runScrapePipeline(searchUrl: string): Promise<{ success: b
       );
     }
 
-    const existing = await db.listing.findMany({ select: { sourceUrl: true } });
+    // Multi-tenant: the scraper (a manual tool) attributes results to the first
+    // household. Skip if none exists yet.
+    const household = await db.household.findFirst({ orderBy: { createdAt: "asc" } });
+    if (!household) {
+      throw new Error("No household exists yet — sign up before running the scraper");
+    }
+
+    const existing = await db.listing.findMany({
+      where: { householdId: household.id },
+      select: { sourceUrl: true },
+    });
     const existingUrls = new Set(existing.map((l) => l.sourceUrl));
     const newListings = filterNewListings(validScraped, existingUrls);
 
-    const profile = await db.preferenceProfile.findFirst({ orderBy: { createdAt: "desc" } });
+    const profile = await db.preferenceProfile.findUnique({ where: { householdId: household.id } });
 
     for (const listing of newListings) {
       let score: number | null = null;
@@ -74,6 +84,7 @@ export async function runScrapePipeline(searchUrl: string): Promise<{ success: b
 
       await db.listing.create({
         data: {
+          householdId: household.id,
           sourceSite: "yad2",
           sourceUrl: listing.sourceUrl,
           address: listing.address,
