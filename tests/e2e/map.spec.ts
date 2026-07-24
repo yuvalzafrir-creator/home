@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { config } from "dotenv";
 import path from "node:path";
+import { signUpHousehold, seedProfile, deleteHousehold } from "./helpers";
 
 config({ path: path.resolve(__dirname, "../../.env.local"), override: true });
 
@@ -15,12 +16,16 @@ const db = new PrismaClient();
 
 test.describe("map page", () => {
   let listingId: string;
-  let createdProfileId: string | null = null;
+  let householdId: string;
 
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ page }) => {
+    householdId = await signUpHousehold(page, db);
+    await seedProfile(db, householdId);
+
     const unique = Date.now();
     const listing = await db.listing.create({
       data: {
+        householdId,
         sourceSite: "yad2",
         sourceUrl: `https://yad2.co.il/item/map-${unique}`,
         address: `Map Test St ${unique}`,
@@ -32,30 +37,10 @@ test.describe("map page", () => {
       },
     });
     listingId = listing.id;
-
-    const anyProfile = await db.preferenceProfile.findFirst();
-    if (!anyProfile) {
-      const created = await db.preferenceProfile.create({
-        data: {
-          locations: JSON.stringify(["Tel Aviv"]),
-          budgetMax: 3000000,
-          mustHaveExtras: JSON.stringify([]),
-          goal: "primary",
-          exampleUrls: JSON.stringify([]),
-        },
-      });
-      createdProfileId = created.id;
-    } else {
-      createdProfileId = null;
-    }
   });
 
   test.afterEach(async () => {
-    await db.listing.delete({ where: { id: listingId } });
-    if (createdProfileId) {
-      await db.preferenceProfile.delete({ where: { id: createdProfileId } });
-      createdProfileId = null;
-    }
+    await deleteHousehold(db, householdId);
   });
 
   test.afterAll(async () => {

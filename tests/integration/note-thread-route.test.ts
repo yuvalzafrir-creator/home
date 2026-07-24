@@ -1,10 +1,19 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { createTestHousehold, cleanupAll } from "../helpers/household";
+
+const auth = vi.hoisted(() => ({ id: null as string | null }));
+vi.mock("@/lib/auth", async (orig) => ({
+  ...(await orig<typeof import("@/lib/auth")>()),
+  getSessionHouseholdId: () => auth.id,
+}));
+
 import { POST } from "@/app/api/listings/[id]/notes/route";
 import { db } from "@/lib/db";
 
 async function makeListing() {
   return db.listing.create({
     data: {
+      householdId: auth.id!,
       sourceSite: "yad2",
       sourceUrl: `https://yad2.co.il/item/note-${Date.now()}-${Math.random()}`,
       address: "Note Thread St 1",
@@ -23,9 +32,14 @@ function req(id: string, body: unknown) {
 }
 
 describe("POST /api/listings/[id]/notes", () => {
+  beforeEach(async () => {
+    const h = await createTestHousehold();
+    auth.id = h.id;
+  });
+
   afterEach(async () => {
-    await db.note.deleteMany();
-    await db.listing.deleteMany({ where: { address: "Note Thread St 1" } });
+    await cleanupAll();
+    auth.id = null;
   });
 
   it("adds a note to a listing", async () => {

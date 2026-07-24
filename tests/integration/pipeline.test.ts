@@ -1,10 +1,11 @@
 // tests/integration/pipeline.test.ts
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { runScrapePipeline } from "@/scraper/run";
 import { db } from "@/lib/db";
 import * as scoring from "@/lib/scoring";
+import { createTestHousehold, cleanupAll } from "../helpers/household";
 
 vi.mock("playwright", () => ({
   chromium: {
@@ -21,15 +22,22 @@ vi.mock("playwright", () => ({
 }));
 
 describe("runScrapePipeline", () => {
+  let householdId: string;
+
+  beforeEach(async () => {
+    // The scraper attributes listings to the first household, so one must exist.
+    const h = await createTestHousehold();
+    householdId = h.id;
+  });
+
   afterEach(async () => {
-    await db.listing.deleteMany();
-    await db.scrapeRun.deleteMany();
-    await db.preferenceProfile.deleteMany();
+    await cleanupAll();
   });
 
   it("saves new listings with scores and logs a successful ScrapeRun", async () => {
     await db.preferenceProfile.create({
       data: {
+        householdId,
         locations: JSON.stringify(["Tel Aviv"]),
         budgetMax: 3000000,
         mustHaveExtras: JSON.stringify([]),
@@ -80,6 +88,7 @@ describe("runScrapePipeline", () => {
   it("skips listings with no sourceUrl or NaN numeric fields instead of crashing or inserting bad data", async () => {
     await db.preferenceProfile.create({
       data: {
+        householdId,
         locations: JSON.stringify(["Tel Aviv"]),
         budgetMax: 3000000,
         mustHaveExtras: JSON.stringify([]),
@@ -131,6 +140,7 @@ describe("runScrapePipeline", () => {
   it("persists a listing with a null score when scoreListing throws, without aborting the run", async () => {
     await db.preferenceProfile.create({
       data: {
+        householdId,
         locations: JSON.stringify(["Tel Aviv"]),
         budgetMax: 3000000,
         mustHaveExtras: JSON.stringify([]),

@@ -2,15 +2,16 @@ import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { config } from "dotenv";
 import path from "node:path";
+import { signUpHousehold, deleteHousehold } from "./helpers";
 
 // Playwright's test runner is a separate Node process from the `next dev`
 // server started by playwright.config.ts's webServer — it does NOT
 // automatically pick up .env.local the way Next does. Load it explicitly so
-// this file's PrismaClient talks to the *same* database
-// (prisma/dev.db) that the dev server (and therefore the app under test)
-// is using. Using `@/lib/db` here isn't reliable: Playwright's TS transform
-// doesn't consistently resolve the Next-only "@/*" tsconfig path alias, so
-// we instantiate PrismaClient directly instead.
+// this file's PrismaClient talks to the *same* database (prisma/dev.db) that
+// the dev server (and therefore the app under test) is using. Using
+// `@/lib/db` here isn't reliable: Playwright's TS transform doesn't
+// consistently resolve the Next-only "@/*" tsconfig path alias, so we
+// instantiate PrismaClient directly instead.
 config({ path: path.resolve(__dirname, "../../.env.local"), override: true });
 
 if (!process.env.DATABASE_URL?.includes("dev.db")) {
@@ -22,41 +23,17 @@ if (!process.env.DATABASE_URL?.includes("dev.db")) {
 
 const db = new PrismaClient();
 
-type ProfileRow = Awaited<ReturnType<typeof db.preferenceProfile.findFirst>>;
-
 test.describe("onboarding", () => {
-  let snapshot: NonNullable<ProfileRow>[];
+  let householdId: string;
 
-  test.beforeEach(async () => {
-    // Snapshot and clear so the onboarding gate lets us reach the form.
-    snapshot = await db.preferenceProfile.findMany();
-    await db.preferenceProfile.deleteMany();
+  test.beforeEach(async ({ page }) => {
+    // A fresh household has no profile yet, so the onboarding gate lets us
+    // reach the form — no snapshot/restore of other households needed.
+    householdId = await signUpHousehold(page, db);
   });
 
   test.afterEach(async () => {
-    // Remove whatever the test created, then restore the real dev profile(s)
-    // exactly as they were (explicit ids + createdAt; updatedAt is @updatedAt).
-    await db.preferenceProfile.deleteMany();
-    for (const p of snapshot) {
-      await db.preferenceProfile.create({
-        data: {
-          id: p.id,
-          locations: p.locations,
-          budgetMax: p.budgetMax,
-          minRooms: p.minRooms,
-          minSizeSqm: p.minSizeSqm,
-          mustHaveExtras: p.mustHaveExtras,
-          goal: p.goal,
-          openToRenting: p.openToRenting,
-          openToFixerUpper: p.openToFixerUpper,
-          renovationBudget: p.renovationBudget,
-          freeText: p.freeText,
-          exampleUrls: p.exampleUrls,
-          learnedSummary: p.learnedSummary,
-          createdAt: p.createdAt,
-        },
-      });
-    }
+    await deleteHousehold(db, householdId);
   });
 
   test.afterAll(async () => {

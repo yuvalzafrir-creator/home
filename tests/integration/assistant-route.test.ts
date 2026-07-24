@@ -1,9 +1,16 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { createTestHousehold, cleanupAll } from "../helpers/household";
 
 // Fake Anthropic client: first call asks to updateProfile, second returns text.
 const create = vi.fn();
 vi.mock("@/lib/claude", () => ({
   getClaudeClient: () => ({ messages: { create } }),
+}));
+
+const auth = vi.hoisted(() => ({ id: null as string | null }));
+vi.mock("@/lib/auth", async (orig) => ({
+  ...(await orig<typeof import("@/lib/auth")>()),
+  getSessionHouseholdId: () => auth.id,
 }));
 
 import { POST } from "@/app/api/assistant/route";
@@ -17,14 +24,21 @@ function req(messages: unknown) {
 }
 
 describe("POST /api/assistant", () => {
+  beforeEach(async () => {
+    const h = await createTestHousehold();
+    auth.id = h.id;
+  });
+
   afterEach(async () => {
-    await db.preferenceProfile.deleteMany();
+    await cleanupAll();
+    auth.id = null;
     create.mockReset();
   });
 
   it("runs a tool-use loop: updateProfile then a final reply", async () => {
     await db.preferenceProfile.create({
       data: {
+        householdId: auth.id!,
         locations: JSON.stringify(["Tel Aviv"]),
         budgetMax: 2500000,
         mustHaveExtras: JSON.stringify([]),

@@ -1,10 +1,19 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { createTestHousehold, cleanupAll } from "../helpers/household";
+
+const auth = vi.hoisted(() => ({ id: null as string | null }));
+vi.mock("@/lib/auth", async (orig) => ({
+  ...(await orig<typeof import("@/lib/auth")>()),
+  getSessionHouseholdId: () => auth.id,
+}));
+
 import { patchProfile } from "@/lib/profile";
 import { db } from "@/lib/db";
 
 async function seedProfile() {
   return db.preferenceProfile.create({
     data: {
+      householdId: auth.id!,
       locations: JSON.stringify(["Tel Aviv"]),
       budgetMax: 2500000,
       mustHaveExtras: JSON.stringify(["mamad"]),
@@ -15,8 +24,14 @@ async function seedProfile() {
 }
 
 describe("patchProfile", () => {
+  beforeEach(async () => {
+    const h = await createTestHousehold();
+    auth.id = h.id;
+  });
+
   afterEach(async () => {
-    await db.preferenceProfile.deleteMany();
+    await cleanupAll();
+    auth.id = null;
   });
 
   it("updates only the provided fields and parses arrays back", async () => {

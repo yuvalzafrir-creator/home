@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { config } from "dotenv";
 import path from "node:path";
+import { signUpHousehold, seedProfile, deleteHousehold } from "./helpers";
 
 // See tests/e2e/onboarding.spec.ts for why .env.local is loaded explicitly and
 // why PrismaClient is instantiated directly rather than importing "@/lib/db".
@@ -18,12 +19,16 @@ const db = new PrismaClient();
 
 test.describe("listing detail + notes", () => {
   let listingId: string;
-  let createdProfileId: string | null = null;
+  let householdId: string;
 
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ page }) => {
+    householdId = await signUpHousehold(page, db);
+    await seedProfile(db, householdId);
+
     const unique = Date.now();
     const listing = await db.listing.create({
       data: {
+        householdId,
         sourceSite: "yad2",
         sourceUrl: `https://yad2.co.il/item/detail-${unique}`,
         address: `Detail Test St ${unique}`,
@@ -37,32 +42,10 @@ test.describe("listing detail + notes", () => {
       },
     });
     listingId = listing.id;
-
-    // /listings/[id] is gated on a profile existing. Ensure one is present.
-    const anyProfile = await db.preferenceProfile.findFirst();
-    if (!anyProfile) {
-      const created = await db.preferenceProfile.create({
-        data: {
-          locations: JSON.stringify(["Tel Aviv"]),
-          budgetMax: 3000000,
-          mustHaveExtras: JSON.stringify([]),
-          goal: "primary",
-          exampleUrls: JSON.stringify([]),
-        },
-      });
-      createdProfileId = created.id;
-    } else {
-      createdProfileId = null;
-    }
   });
 
   test.afterEach(async () => {
-    await db.note.deleteMany({ where: { listingId } });
-    await db.listing.delete({ where: { id: listingId } });
-    if (createdProfileId) {
-      await db.preferenceProfile.delete({ where: { id: createdProfileId } });
-      createdProfileId = null;
-    }
+    await deleteHousehold(db, householdId);
   });
 
   test.afterAll(async () => {
@@ -77,7 +60,15 @@ test.describe("listing detail + notes", () => {
 
     const note = `visit Sunday ${Date.now()}`;
     await page.getByLabel("הוספת הערה").fill(note);
-    await page.getByRole("button", { name: "הוספת הערה", exact: true }).click();
+    // Wait for the note to actually persist (POST 201) before reloading, so the
+    // reload can't race ahead of the write.
+    const [notesRes] = await Promise.all([
+      page.waitForResponse(
+        (r) => r.url().includes("/notes") && r.request().method() === "POST"
+      ),
+      page.getByRole("button", { name: "הוספת הערה", exact: true }).click(),
+    ]);
+    expect(notesRes.status()).toBe(201);
     await expect(page.getByText(note)).toBeVisible();
 
     await page.reload();

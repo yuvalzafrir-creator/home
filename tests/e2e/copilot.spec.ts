@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { config } from "dotenv";
 import path from "node:path";
+import { signUpHousehold, seedProfile, deleteHousehold } from "./helpers";
 
 config({ path: path.resolve(__dirname, "../../.env.local"), override: true });
 
@@ -14,31 +15,16 @@ if (!process.env.DATABASE_URL?.includes("dev.db")) {
 const db = new PrismaClient();
 
 test.describe("copilot", () => {
-  let createdProfileId: string | null = null;
+  let householdId: string;
 
-  test.beforeEach(async () => {
-    const anyProfile = await db.preferenceProfile.findFirst();
-    if (!anyProfile) {
-      const created = await db.preferenceProfile.create({
-        data: {
-          locations: JSON.stringify(["Tel Aviv"]),
-          budgetMax: 3000000,
-          mustHaveExtras: JSON.stringify([]),
-          goal: "primary",
-          exampleUrls: JSON.stringify([]),
-        },
-      });
-      createdProfileId = created.id;
-    } else {
-      createdProfileId = null;
-    }
+  test.beforeEach(async ({ page }) => {
+    householdId = await signUpHousehold(page, db);
+    // The dashboard ("/") redirects to onboarding without a profile.
+    await seedProfile(db, householdId);
   });
 
   test.afterEach(async () => {
-    if (createdProfileId) {
-      await db.preferenceProfile.delete({ where: { id: createdProfileId } });
-      createdProfileId = null;
-    }
+    await deleteHousehold(db, householdId);
   });
 
   test.afterAll(async () => {

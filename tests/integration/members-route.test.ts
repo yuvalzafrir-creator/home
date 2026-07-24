@@ -1,4 +1,12 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { createTestHousehold, cleanupAll } from "../helpers/household";
+
+const auth = vi.hoisted(() => ({ id: null as string | null }));
+vi.mock("@/lib/auth", async (orig) => ({
+  ...(await orig<typeof import("@/lib/auth")>()),
+  getSessionHouseholdId: () => auth.id,
+}));
+
 import { GET, POST } from "@/app/api/members/route";
 import { db } from "@/lib/db";
 
@@ -10,8 +18,14 @@ function req(body: unknown) {
 }
 
 describe("members API", () => {
+  beforeEach(async () => {
+    const h = await createTestHousehold();
+    auth.id = h.id;
+  });
+
   afterEach(async () => {
-    await db.member.deleteMany();
+    await cleanupAll();
+    auth.id = null;
   });
 
   it("creates a member and lists it", async () => {

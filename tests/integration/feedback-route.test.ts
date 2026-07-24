@@ -1,4 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { createTestHousehold, cleanupAll } from "../helpers/household";
+
+const auth = vi.hoisted(() => ({ id: null as string | null }));
+vi.mock("@/lib/auth", async (orig) => ({
+  ...(await orig<typeof import("@/lib/auth")>()),
+  getSessionHouseholdId: () => auth.id,
+}));
+
 import { POST } from "@/app/api/feedback/route";
 import { db } from "@/lib/db";
 import * as prefProfile from "@/lib/preference-profile";
@@ -8,8 +16,12 @@ describe("POST /api/feedback", () => {
   let profileId: string;
 
   beforeEach(async () => {
+    const h = await createTestHousehold();
+    auth.id = h.id;
+
     const listing = await db.listing.create({
       data: {
+        householdId: h.id,
         sourceSite: "yad2",
         sourceUrl: `https://yad2.co.il/item/${Date.now()}`,
         address: "Test St 1",
@@ -22,6 +34,7 @@ describe("POST /api/feedback", () => {
 
     const profile = await db.preferenceProfile.create({
       data: {
+        householdId: h.id,
         locations: JSON.stringify(["Tel Aviv"]),
         budgetMax: 3000000,
         mustHaveExtras: JSON.stringify([]),
@@ -33,9 +46,8 @@ describe("POST /api/feedback", () => {
   });
 
   afterEach(async () => {
-    await db.feedback.deleteMany();
-    await db.listing.deleteMany();
-    await db.preferenceProfile.deleteMany();
+    await cleanupAll();
+    auth.id = null;
   });
 
   it("stores feedback for a listing", async () => {

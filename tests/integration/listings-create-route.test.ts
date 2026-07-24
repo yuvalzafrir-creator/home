@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { createTestHousehold, cleanupAll } from "../helpers/household";
 
 vi.mock("@/lib/scoring", () => ({
   scoreListing: vi.fn(async () => ({ score: 77, reason: "בדיקה" })),
@@ -6,6 +7,12 @@ vi.mock("@/lib/scoring", () => ({
 
 vi.mock("@/lib/geocode", () => ({
   geocodeAddress: vi.fn(async () => ({ lat: 32.08, lng: 34.78 })),
+}));
+
+const auth = vi.hoisted(() => ({ id: null as string | null }));
+vi.mock("@/lib/auth", async (orig) => ({
+  ...(await orig<typeof import("@/lib/auth")>()),
+  getSessionHouseholdId: () => auth.id,
 }));
 
 import { POST } from "@/app/api/listings/route";
@@ -28,8 +35,14 @@ function req(body: unknown) {
 }
 
 describe("POST /api/listings", () => {
+  beforeEach(async () => {
+    const h = await createTestHousehold();
+    auth.id = h.id;
+  });
+
   afterEach(async () => {
-    await db.listing.deleteMany({ where: { address: "יצירה 1" } });
+    await cleanupAll();
+    auth.id = null;
   });
 
   it("creates a listing, deriving sourceSite and scoring it", async () => {

@@ -1,10 +1,24 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { createTestHousehold, cleanupAll } from "../helpers/household";
+
+const auth = vi.hoisted(() => ({ id: null as string | null }));
+vi.mock("@/lib/auth", async (orig) => ({
+  ...(await orig<typeof import("@/lib/auth")>()),
+  getSessionHouseholdId: () => auth.id,
+}));
+
 import { POST, GET } from "@/app/api/onboarding/route";
 import { db } from "@/lib/db";
 
 describe("POST /api/onboarding", () => {
+  beforeEach(async () => {
+    const h = await createTestHousehold();
+    auth.id = h.id;
+  });
+
   afterEach(async () => {
-    await db.preferenceProfile.deleteMany();
+    await cleanupAll();
+    auth.id = null;
   });
 
   it("creates a preference profile from valid input", async () => {
